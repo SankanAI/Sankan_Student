@@ -165,7 +165,7 @@ const LEVELS: GameLevel[] = [
 ];
 
 export default function TypingTriumph() {
-  const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[1]);
+  const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
   const [currentWord, setCurrentWord] = useState('');
   const [userInput, setUserInput] = useState('');
   const [score, setScore] = useState(0);

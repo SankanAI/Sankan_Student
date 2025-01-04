@@ -33,18 +33,3 @@ export interface Bubble {
     }
   ];
   
-  // lib/eventDescriptions.ts
-  export const EVENT_DESCRIPTIONS: Record<string, string> = {
-    click: "Click once on the bubble to burst it!",
-    dblclick: "Double-click quickly to pop this bubble!",
-    contextmenu: "Right-click on the bubble to burst it!",
-    mouseover: "Move your mouse over the bubble to pop it!",
-    mouseenter: "Enter the bubble area to make it burst!",
-    mouseleave: "Enter and leave the bubble to pop it!",
-    mousemove: "Move your mouse inside the bubble to burst it!",
-    mousedown: "Press and hold your mouse button on the bubble!",
-    mouseup: "Press and release your mouse button to pop it!",
-    keydown: "Focus the bubble and press any key!",
-    drag: "Click and drag the bubble to its target!",
-    drop: "Drag and drop on the target zone!"
-  };

@@ -9,6 +9,9 @@ export default {
   ],
   theme: {
   	extend: {
+		cursor: {
+			'custom-icon': 'url("https://cdn-icons-gif.flaticon.com/10400/10400634.gif") 16 16, auto', // External SVG icon URL
+			  },
 		keyframes: {
 			fade: {
 			  '0%': { color: '#000000', transform: 'translateY(0)' }, // Start with dark
