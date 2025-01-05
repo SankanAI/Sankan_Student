@@ -35,11 +35,11 @@ interface Website {
 interface SecurityRisk {
   type: RiskType;
   description: string;
-  severity: 'low' | 'medium' | 'high';
+  severity: 'low' | 'medium' | 'high' | 'critical';
 }
 
 type SecurityLevel = 'secure' | 'warning' | 'dangerous';
-type RiskType = 'phishing' | 'malware' | 'unsecured' | 'scam' | 'dataCollection';
+type RiskType = 'phishing' | 'malware' | 'unsecured' | 'scam' | 'dataCollection' | 'adware' | 'man-in-the-middle';
 
 interface PlayerStats {
   safetyScore: number;
