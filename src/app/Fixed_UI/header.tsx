@@ -26,7 +26,7 @@ export default function AppAppBar(){
             </svg>
             </div>
             <h2 className="text-lg font-bold leading-tight tracking-tight text-black">
-            Samurai Academy
+            Sankan Academy
             </h2>
         </div>
         <DropdownMenu>
