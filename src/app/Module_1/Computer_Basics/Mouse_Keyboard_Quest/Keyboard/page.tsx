@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
+import { useRouter } from 'next/navigation';
 
 type GameLevel = {
   id: number;
@@ -177,6 +177,8 @@ export default function TypingTriumph() {
   const [correctAttempts, setCorrectAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [KeyComplete, setkeyComplete]=useState<boolean>(false);
+  const router=useRouter();
 
   const getNewWord = () => {
     const randomIndex = Math.floor(Math.random() * currentLevel.words.length);
@@ -201,7 +203,7 @@ export default function TypingTriumph() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, KeyComplete]);
 
   const startGame = () => {
     setIsPlaying(true);
@@ -238,6 +240,7 @@ export default function TypingTriumph() {
       setCurrentLevel(LEVELS[nextLevelIndex]);
       setGameCompleted(false);
     }
+    else{ setkeyComplete(true) }
   };
 
   const isLevelComplete = score >= currentLevel.requiredScore;
@@ -305,6 +308,11 @@ export default function TypingTriumph() {
                       Next Level
                     </Button>
                   )}
+                 
+                      <Button className="flex-1" onClick={()=>{router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Dev_Detective')}}>
+                        Dev Detective
+                      </Button>
+                    
                 </div>
               </AlertDescription>
             </Alert>

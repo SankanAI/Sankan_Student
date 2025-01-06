@@ -248,8 +248,8 @@ const SafeBrowserSimulator: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4">
-      <Card className="border-2">
+    <div className="w-full max-w-6xl mx-auto p-4 flex gap-4">
+      <Card className="border-2 flex-[0.75]">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl flex items-center gap-2">
@@ -356,6 +356,41 @@ const SafeBrowserSimulator: React.FC = () => {
             </TabsContent>
           </Tabs>
         </CardContent>
+      </Card>
+      <Card className="order-2 flex-[0.25] w-72 h-[500px] rounded-lg shadow-lg flex flex-col items-center bg-gray-50 relative">
+      <div className="flex-1 w-full bg-white p-4 rounded-t-lg">
+    <h2 className="text-center text-lg font-bold">Android Screen</h2>
+    <div className="h-full flex items-center justify-center">
+      <p className="text-gray-600">Content goes here</p>
+    </div>
+  </div>
+
+  {/* Navigation Buttons */}
+  <div className="w-full h-16 bg-gray-200 rounded-lg flex items-center justify-evenly border-[5px]">
+    {/* Back Button */}
+    <button
+      className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center"
+      aria-label="Back Button"
+    >
+      🔙
+    </button>
+
+    {/* Home Button */}
+    <button
+      className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center"
+      aria-label="Home Button"
+    >
+      🏠
+    </button>
+
+    {/* Menu Button */}
+    <button
+      className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center"
+      aria-label="Menu Button"
+    >
+      ☰
+    </button>
+  </div>
       </Card>
     </div>
   );

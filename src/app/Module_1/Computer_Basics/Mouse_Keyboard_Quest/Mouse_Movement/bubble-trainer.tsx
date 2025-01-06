@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useRouter } from 'next/navigation';
 
 const EVENTS = {
   click: 'Left Click',
@@ -31,6 +32,7 @@ type EmojiBubble = {
 export default function EnhancedEmojiTrainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [emojis, setEmojis] = useState<EmojiBubble[]>([]);
+  const router=useRouter();
   const [eventStats, setEventStats] = useState<EventStats>({
     click: 0,
     contextmenu: 0,
@@ -247,7 +249,7 @@ export default function EnhancedEmojiTrainer() {
                   <Button className="flex-1">
                     Try Again
                   </Button>
-                  <Button  className="flex-1">
+                  <Button  className="flex-1" onClick={()=>{router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard')}}>
                       Next Level
                   </Button>
                 </div>
