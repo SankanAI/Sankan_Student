@@ -14,8 +14,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
-  CardFooter
+  CardTitle
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -51,6 +50,11 @@ interface FolderItem {
   name: string;
   type: 'folder' | 'file' | 'zip';
   parentId: string | null;
+}
+
+interface ValidationResult {
+  message: string;
+  type: 'error' | 'success';
 }
 
 const projectTemplates: Record<string, ProjectTemplate> = {
@@ -225,7 +229,7 @@ const ProjectLearningInterface = () => {
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
-  const [validationResults, setValidationResults] = useState<string[]>([]);
+  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [mode, setMode] = useState<'select' | 'create'>('select');
   const [completedProjects, setCompletedProjects] = useState<Record<string, boolean>>({});
   const [projectProgress, setProjectProgress] = useState<Record<string, number>>({});
