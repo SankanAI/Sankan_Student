@@ -248,7 +248,7 @@ const FirewallTraining: React.FC = () => {
     setShowDialog(true);
   };
 
-  const handleExerciseComplete = (result: FirewallRule) => {
+  const handleExerciseComplete = () => {
     if (currentModule) {
       setProgress({
         ...progress,

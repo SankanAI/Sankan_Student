@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +27,22 @@ interface ComputerSpeeds {
   quantum: number;
 }
 
+// Move constants outside component to prevent recreating on each render
+const INITIAL_REQUIREMENTS: Requirement[] = [
+  { id: "length", label: "At least 8 characters long", met: false },
+  { id: "uppercase", label: "Contains uppercase letter", met: false },
+  { id: "lowercase", label: "Contains lowercase letter", met: false },
+  { id: "number", label: "Contains number", met: false },
+  { id: "special", label: "Contains special character", met: false },
+];
+
+const COMPUTER_SPEEDS: ComputerSpeeds = {
+  human: 1,
+  computer: 1000000,
+  supercomputer: 1000000000,
+  quantum: 1000000000000,
+};
+
 const PasswordSamurai: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [strength, setStrength] = useState<number>(0);
@@ -36,18 +52,9 @@ const PasswordSamurai: React.FC = () => {
     supercomputer: "",
     quantum: "",
   });
+  const [checklist, setChecklist] = useState<Requirement[]>(INITIAL_REQUIREMENTS);
 
-  const requirements: Requirement[] = [
-    { id: "length", label: "At least 8 characters long", met: false },
-    { id: "uppercase", label: "Contains uppercase letter", met: false },
-    { id: "lowercase", label: "Contains lowercase letter", met: false },
-    { id: "number", label: "Contains number", met: false },
-    { id: "special", label: "Contains special character", met: false },
-  ];
-
-  const [checklist, setChecklist] = useState<Requirement[]>(requirements);
-
-  const formatTime = (seconds: number): string => {
+  const formatTime = useCallback((seconds: number): string => {
     if (seconds < 1) return "Instantly";
     if (seconds < 60) return `${Math.round(seconds)} seconds`;
     if (seconds < 3600) return `${Math.round(seconds / 60)} minutes`;
@@ -55,69 +62,98 @@ const PasswordSamurai: React.FC = () => {
     if (seconds < 31536000) return `${Math.round(seconds / 86400)} days`;
     if (seconds < 31536000 * 100) return `${Math.round(seconds / 31536000)} years`;
     return "Centuries";
-  };
+  }, []);
 
-  const calculateStrength = (pass: string): void => {
-    const newChecklist: Requirement[] = [...checklist];
-
-    newChecklist[0].met = pass.length >= 8;
-    newChecklist[1].met = /[A-Z]/.test(pass);
-    newChecklist[2].met = /[a-z]/.test(pass);
-    newChecklist[3].met = /[0-9]/.test(pass);
-    newChecklist[4].met = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+  const calculateStrength = useCallback((pass: string): void => {
+    const newChecklist = INITIAL_REQUIREMENTS.map(req => {
+      const requirement = { ...req };
+      switch (req.id) {
+        case "length":
+          requirement.met = pass.length >= 8;
+          break;
+        case "uppercase":
+          requirement.met = /[A-Z]/.test(pass);
+          break;
+        case "lowercase":
+          requirement.met = /[a-z]/.test(pass);
+          break;
+        case "number":
+          requirement.met = /[0-9]/.test(pass);
+          break;
+        case "special":
+          requirement.met = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+          break;
+      }
+      return requirement;
+    });
 
     setChecklist(newChecklist);
 
-    const metCount: number = newChecklist.filter((req) => req.met).length;
+    const metCount = newChecklist.filter((req) => req.met).length;
     setStrength(metCount * 20);
 
     // Calculate character space
-    const possibleChars: number =
-      (newChecklist[1].met ? 26 : 0) +
-      (newChecklist[2].met ? 26 : 0) +
-      (newChecklist[3].met ? 10 : 0) +
-      (newChecklist[4].met ? 30 : 0);
+    const possibleChars = 
+      (newChecklist[1].met ? 26 : 0) + // uppercase
+      (newChecklist[2].met ? 26 : 0) + // lowercase
+      (newChecklist[3].met ? 10 : 0) + // numbers
+      (newChecklist[4].met ? 30 : 0);  // special chars
 
-    const combinations: number = Math.pow(possibleChars, pass.length);
+    // Prevent 0^n calculation when no character types are selected
+    if (possibleChars === 0 || pass.length === 0) {
+      setCrackTimes({
+        human: "Instantly",
+        computer: "Instantly",
+        supercomputer: "Instantly",
+        quantum: "Instantly"
+      });
+      return;
+    }
 
-    const speeds: ComputerSpeeds = {
-      human: 1,
-      computer: 1000000,
-      supercomputer: 1000000000,
-      quantum: 1000000000000,
-    };
+    const combinations = Math.pow(possibleChars, pass.length);
 
     const times: CrackTimes = {
-      human: formatTime(combinations / speeds.human),
-      computer: formatTime(combinations / speeds.computer),
-      supercomputer: formatTime(combinations / speeds.supercomputer),
-      quantum: formatTime(combinations / speeds.quantum),
+      human: formatTime(combinations / COMPUTER_SPEEDS.human),
+      computer: formatTime(combinations / COMPUTER_SPEEDS.computer),
+      supercomputer: formatTime(combinations / COMPUTER_SPEEDS.supercomputer),
+      quantum: formatTime(combinations / COMPUTER_SPEEDS.quantum),
     };
 
     setCrackTimes(times);
-  };
+  }, [formatTime]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     calculateStrength(password);
   }, [password, calculateStrength]);
 
-  const getStrengthTitle = (): string => {
+  const getStrengthTitle = useCallback((): string => {
     if (strength <= 20) return "Novice";
     if (strength <= 40) return "Apprentice";
     if (strength <= 60) return "Warrior";
     if (strength <= 80) return "Master";
     return "Samurai";
-  };
+  }, [strength]);
 
-  const getStrengthColor = (): string => {
+  const getStrengthColor = useCallback((): string => {
     if (strength <= 20) return "bg-red-500";
     if (strength <= 40) return "bg-orange-500";
     if (strength <= 60) return "bg-yellow-500";
     if (strength <= 80) return "bg-blue-500";
     return "bg-green-500";
-  };
+  }, [strength]);
 
-  const canProceed = checklist.every((req) => req.met);
+  const canProceed = useMemo(() => 
+    checklist.every((req) => req.met),
+    [checklist]
+  );
+
+  const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleNextStep = useCallback(() => {
+    alert("Next Step");
+  }, []);
 
   return (
     <div className="w-full max-w-2xl mx-auto p-4">
@@ -139,9 +175,7 @@ const PasswordSamurai: React.FC = () => {
               type="text"
               placeholder="Enter your password"
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setPassword(e.target.value)
-              }
+              onChange={handlePasswordChange}
               className="text-lg"
             />
             <Progress value={strength} className={`h-2 ${getStrengthColor()}`} />
@@ -155,7 +189,7 @@ const PasswordSamurai: React.FC = () => {
             <div className="space-y-2">
               {checklist.map((requirement) => (
                 <div key={requirement.id} className="flex items-center space-x-2">
-                  <Checkbox checked={requirement.met} />
+                  <Checkbox checked={requirement.met} readOnly />
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     {requirement.label}
                   </label>
@@ -188,7 +222,7 @@ const PasswordSamurai: React.FC = () => {
           {canProceed && (
             <button
               className="w-1/4 ml-[75%] mt-4 py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600"
-              onClick={() => alert("Next Step")}
+              onClick={handleNextStep}
             >
               Next
             </button>

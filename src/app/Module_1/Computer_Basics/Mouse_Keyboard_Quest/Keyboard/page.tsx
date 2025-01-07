@@ -203,7 +203,7 @@ export default function TypingTriumph() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, KeyComplete]);
+  }, [isPlaying, KeyComplete, timeLeft]);
 
   const startGame = () => {
     setIsPlaying(true);
