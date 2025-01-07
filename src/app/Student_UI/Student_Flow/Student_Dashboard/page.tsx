@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+
 // Mock data for the dashboard
 const studentData = {
   name: "Takeshi Yamamoto",

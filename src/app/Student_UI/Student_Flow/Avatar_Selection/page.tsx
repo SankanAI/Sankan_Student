@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
 import { Search, Check } from "lucide-react"
 import { useState } from "react"
@@ -175,7 +175,7 @@ export default function SamuraiGallery() {
     <div className="relative flex min-h-screen flex-col bg-[#221111]">
       <div className="flex h-full grow flex-col">
         
-        <div className="flex flex-1 justify-center px-40 py-5">
+        <div className="flex flex-1 justify-center px-40 py-0">
           <div className="flex w-[512px] flex-1 flex-col py-5">
             <div className="flex justify-between items-center px-4 pb-3 pt-5">
               <h2 className="text-left text-[28px] font-bold leading-tight tracking-tight text-white">
@@ -191,11 +191,7 @@ export default function SamuraiGallery() {
             
             <div className="px-4 py-3">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-[#c89393]" />
-                <Input
-                  placeholder="Search for a samurai"
-                  className="h-12 w-full bg-[#472424] pl-10 text-white placeholder:text-[#c89393] focus-visible:ring-0"
-                />
+                 <Separator className="my-4" />
               </div>
             </div>
 

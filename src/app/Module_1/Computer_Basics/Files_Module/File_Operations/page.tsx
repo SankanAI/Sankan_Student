@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, CheckCircle, Plus, Trophy, ArrowDownAZ, Hash, ArrowRight } from 'lucide-react';
+import { FileText, Plus, Trophy, ArrowDownAZ, Hash, ArrowRight } from 'lucide-react';
 
 const InteractiveFileTasks = () => {
   // Task and progress management

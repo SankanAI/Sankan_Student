@@ -1,35 +1,74 @@
-
 "use client";
 import {
   Card,
   CardContent,
   CardFooter
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import React, {useRef} from "react";
-import {useRouter} from "next/navigation";
+import React, { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function backStory(){
+export default function BackStory() {
+  const video = useRef<HTMLVideoElement>(null);
+  const [loading, setLoading] = useState(true); // State to track loading
+  const router = useRouter();
 
-  const video=useRef<HTMLVideoElement>(null);
-  const router = useRouter()
+  const handleVideoLoad = () => {
+    setLoading(false); // Video has loaded
+  };
 
-    return <>
-    <div className="flex items-center justify-center h-screen bg-gray-900">
-      <Card className="bg-gray-900 border-none">
+  return (
+    <>
+      <div className="flex items-center justify-center h-screen bg-gray-900">
+        <Card className="bg-gray-900 border-none">
           <h1 className="text-center text-5xl tracking-tighter animate-fade">
             Welcome to Sankan Kingdom
           </h1>
-      <CardContent>
-        <video onEnded={()=>{router.push('/Student_UI/Student_Flow/Avatar_Selection')}} ref={video} style={{width:"700px"}} className="rounded-[3vh] animate-fadeInCard">
-          <source src="https://cdn.pixabay.com/video/2024/12/31/249884.mp4" type="video/mp4"/>
-        </video>
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" className="rounded-full" onClick={()=>{if(video.current){video.current.play();}}}>Play</Button>
-        <Button className="bg-[#6d28d9] rounded-full" onClick={()=>{router.push('/Student_UI/Student_Flow/Avatar_Selection')}}>Skip</Button>
-      </CardFooter>
-    </Card>
-    </div>
-  </>
+          <CardContent>
+            {/* Show loading indicator while the video is loading */}
+            {loading && (
+              <div className="flex justify-center items-center h-[394px] w-[700px] rounded-[3vh] bg-gray-700">
+                <p className="text-white animate-pulse">Loading...</p>
+              </div>
+            )}
+            <video
+              onLoadedData={handleVideoLoad} // Hide loading once video data is available
+              onEnded={() => {
+                router.push("/Student_UI/Student_Flow/Avatar_Selection");
+              }}
+              ref={video}
+              style={{ width: "700px", display: loading ? "none" : "block" }} // Hide video until it's loaded
+              className="rounded-[3vh] animate-fadeInCard"
+            >
+              <source
+                src="https://cdn.pixabay.com/video/2024/12/31/249884.mp4"
+                type="video/mp4"
+              />
+            </video>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => {
+                if (video.current) {
+                  video.current.play();
+                }
+              }}
+            >
+              Play
+            </Button>
+            <Button
+              className="bg-[#6d28d9] rounded-full"
+              onClick={() => {
+                router.push("/Student_UI/Student_Flow/Avatar_Selection");
+              }}
+            >
+              Skip
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    </>
+  );
 }

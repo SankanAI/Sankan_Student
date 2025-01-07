@@ -13,7 +13,7 @@ export default function Home() {
         <div className="w-full flex-1 flex-col py-5">
           <div className=" rounded-xl bg-cover bg-center bg-no-repeat p-8"
             style={{
-              backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%), url("https://cdn.usegalileo.ai/sdxl10/6b462333-622b-4954-a109-51445dde8827.png")`
+              backgroundImage: `url("https://cdn.usegalileo.ai/sdxl10/6b462333-622b-4954-a109-51445dde8827.png")`
             }}>
             <div className="flex flex-col gap-6 items-center justify-center ">
               <div className="space-y-2">
