@@ -278,7 +278,7 @@ const ProjectLearningInterface = () => {
   const validateStructure = () => {
     if (!selectedProject) return;
     
-    const errors: string[] = [];
+    const results: ValidationResult[] = [];
     const template = projectTemplates[selectedProject].structure;
     
     const findItem = (items: FolderItem[], name: string, parentId: string | null): FolderItem | undefined => {
@@ -290,18 +290,29 @@ const ProjectLearningInterface = () => {
         if (required.required) {
           const item = findItem(items, required.name, parentId);
           if (!item) {
-            errors.push(`Missing ${required.type}: ${path}${required.name}`);
+            results.push({
+              message: `Missing ${required.type}: ${path}${required.name}`,
+              type: 'error'
+            });
           } else if (required.children) {
             validateRecursive(required.children, item.id, `${path}${required.name}/`);
           }
         }
       });
     };
-
+  
     validateRecursive(template);
-    setValidationResults(errors);
+    setValidationResults(results);
     setShowValidationDialog(true);
-    const isComplete = errors.length === 0;
+    const isComplete = results.length === 0;
+    
+    if (isComplete) {
+      results.push({
+        message: "All required files and folders are present",
+        type: 'success'
+      });
+    }
+  
     setCompletedProjects(prev => ({
       ...prev,
       [selectedProject]: isComplete
