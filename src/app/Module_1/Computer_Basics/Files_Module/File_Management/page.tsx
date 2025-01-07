@@ -563,18 +563,26 @@ const ProjectLearningInterface = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <Alert className="bg-red-50 border-red-200">
-              <XCircle className="h-4 w-4 text-red-500" />
-              <AlertTitle>Structure Incomplete</AlertTitle>
-              <AlertDescription>
-                <p className="mb-2">The following items are missing:</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  {validationResults.map((error, index) => (
-                    <li key={index} className="text-red-600">{error}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-4">
+              {validationResults.map((result, index) => (
+                <Alert 
+                  key={index} 
+                  className={result.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}
+                >
+                  {result.type === 'success' ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                  <AlertTitle>
+                    {result.type === 'success' ? 'Success' : 'Missing Item'}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {result.message}
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </div>
           )}
           <DialogFooter>
             <Button onClick={() => setShowValidationDialog(false)}>
