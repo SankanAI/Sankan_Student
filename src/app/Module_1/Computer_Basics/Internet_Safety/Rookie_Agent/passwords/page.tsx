@@ -189,7 +189,7 @@ const PasswordSamurai: React.FC = () => {
             <div className="space-y-2">
               {checklist.map((requirement) => (
                 <div key={requirement.id} className="flex items-center space-x-2">
-                  <Checkbox checked={requirement.met} readOnly />
+                  <Checkbox checked={requirement.met} disabled />
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     {requirement.label}
                   </label>
