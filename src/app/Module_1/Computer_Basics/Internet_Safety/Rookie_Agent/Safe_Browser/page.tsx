@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ const SafeBrowserSimulator: React.FC = () => {
   });
   const [showSecurityAlert, setShowSecurityAlert] = useState<boolean>(false);
   const [securityMessage, setSecurityMessage] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>('browser');
+  // const [activeTab, setActiveTab] = useState<string>('browser');
 
   // Sample websites database
   const websites: Website[] = [
@@ -347,7 +347,7 @@ const SafeBrowserSimulator: React.FC = () => {
                     <ul className="space-y-2">
                       <li>• Always check for HTTPS and the padlock icon</li>
                       <li>• Verify website URLs carefully</li>
-                      <li>• Don't enter sensitive information on suspicious sites</li>
+                      <li>• Don&apos;t enter sensitive information on suspicious sites</li>
                       <li>• Watch for poor grammar and urgent requests</li>
                     </ul>
                   </div>

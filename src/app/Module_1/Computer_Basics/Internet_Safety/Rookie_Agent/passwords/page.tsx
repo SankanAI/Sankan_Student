@@ -99,7 +99,7 @@ const PasswordSamurai: React.FC = () => {
 
   useEffect(() => {
     calculateStrength(password);
-  }, [password]);
+  }, [password, calculateStrength]);
 
   const getStrengthTitle = (): string => {
     if (strength <= 20) return "Novice";

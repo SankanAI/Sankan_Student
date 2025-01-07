@@ -95,7 +95,7 @@ export default function DevDetective() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, timeLeft]);
 
   // Game control functions
   const endGame = () => {

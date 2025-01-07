@@ -548,7 +548,7 @@ const ProjectLearningInterface = () => {
               <CheckCircle className="h-4 w-4 text-green-500" />
               <AlertTitle>Perfect Match!</AlertTitle>
               <AlertDescription>
-                Congratulations! Your project structure matches all requirements. You're ready to start coding!
+                Congratulations! Your project structure matches all requirements. You&apos;re ready to start coding!
               </AlertDescription>
             </Alert>
           ) : (
