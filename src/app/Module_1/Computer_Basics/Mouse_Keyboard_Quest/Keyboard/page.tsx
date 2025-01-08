@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 type GameLevel = {
   id: number;
@@ -178,6 +179,7 @@ export default function TypingTriumph() {
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [KeyComplete, setkeyComplete]=useState<boolean>(false);
+  const [showCongrats, setShowCongrats] = useState(false);
   const router=useRouter();
 
   const getNewWord = () => {
@@ -203,7 +205,7 @@ export default function TypingTriumph() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, KeyComplete]);
+  }, [isPlaying, KeyComplete, timeLeft]);
 
   const startGame = () => {
     setIsPlaying(true);
@@ -240,7 +242,9 @@ export default function TypingTriumph() {
       setCurrentLevel(LEVELS[nextLevelIndex]);
       setGameCompleted(false);
     }
-    else{ setkeyComplete(true) }
+    else{ 
+      setkeyComplete(true)
+     }
   };
 
   const isLevelComplete = score >= currentLevel.requiredScore;
@@ -288,6 +292,20 @@ export default function TypingTriumph() {
             </Alert>
           )}
 
+          <Dialog open={showCongrats}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Congratulations! 🎉</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <p>You've mastered all typing levels! Ready for your next challenge?</p>
+                </div>
+                <Button onClick={() => router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Dev_Detective')}>
+                  Continue to Dev Detective
+                </Button>
+              </DialogContent>
+            </Dialog>
+
           {gameCompleted && (
             <Alert className="mb-4">
               <AlertTitle>
@@ -308,10 +326,12 @@ export default function TypingTriumph() {
                       Next Level
                     </Button>
                   )}
-                 
-                      <Button className="flex-1" onClick={()=>{router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Dev_Detective')}}>
-                        Dev Detective
-                      </Button>
+                  {isLevelComplete && currentLevel.id === LEVELS.length && (
+                    <Button onClick={() => setShowCongrats(true)} className="flex-1">
+                     Dev Detective
+                    </Button>
+                  )}
+              
                     
                 </div>
               </AlertDescription>

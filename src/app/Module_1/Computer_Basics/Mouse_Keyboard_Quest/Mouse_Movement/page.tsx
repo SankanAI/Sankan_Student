@@ -1,9 +1,11 @@
+"use client";
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 
 const EVENTS = {
@@ -12,6 +14,29 @@ const EVENTS = {
   dblclick: 'Double Click',
   mouseover: 'Mouse Over'
 };
+
+const INSTRUCTIONS = [
+  {
+    title: "Left Click",
+    description: "Press the left mouse button once to interact with elements.",
+    image: "/api/placeholder/400/300"
+  },
+  {
+    title: "Right Click",
+    description: "Press the right mouse button to open context menus or perform secondary actions.",
+    image: "/api/placeholder/400/300"
+  },
+  {
+    title: "Double Click",
+    description: "Quickly press the left mouse button twice to perform special actions.",
+    image: "/api/placeholder/400/300"
+  },
+  {
+    title: "Mouse Over",
+    description: "Move your cursor over elements to trigger hover effects and interactions.",
+    image: "/api/placeholder/400/300"
+  }
+];
 
 const EMOJIS = ['😊', '🤣', '👿', '🐻', '🎮', '🎲', '🎪', '😉', '👽', '😇', '🥶', '🐯'];
 
@@ -29,10 +54,11 @@ type EmojiBubble = {
   eventType: string;
 };
 
+
 export default function EnhancedEmojiTrainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [emojis, setEmojis] = useState<EmojiBubble[]>([]);
-  const router=useRouter();
+  const router = useRouter();
   const [eventStats, setEventStats] = useState<EventStats>({
     click: 0,
     contextmenu: 0,
@@ -44,8 +70,64 @@ export default function EnhancedEmojiTrainer() {
   const [gameCompleted, setGameCompleted] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [showHint, setShowHint] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [currentInstruction, setCurrentInstruction] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [showCongrats, setShowCongrats] = useState(false);
   const initialBubbleCount = 5;
+
+  useEffect(() => {
+    speechRef.current = new SpeechSynthesisUtterance();
+    return () => {
+      if (speechRef.current) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleNextLevel = () => {
+    playSound('https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/game-bonus-144751 (1).mp3')
+    setShowCongrats(true);
+  };
+
+  const proceedToNextLevel = () => {
+    setShowCongrats(false);
+    router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard');
+  };
+
+  const speakText = (text: string) => {
+    if (speechRef.current) {
+      window.speechSynthesis.cancel();
+      speechRef.current.text = text;
+      speechRef.current.onend = () => {
+        if (currentInstruction < INSTRUCTIONS.length - 1) {
+          setCurrentInstruction(prev => prev + 1);
+        } else {
+          setShowInstructions(false);
+          startGame();
+        }
+      };
+      window.speechSynthesis.speak(speechRef.current);
+    }
+  };
+
+  const playSound = (soundFile: string) => {
+    const audio = new Audio(soundFile);
+    audio.play();
+  };
+  
+
+  useEffect(() => {
+    if (showInstructions && INSTRUCTIONS[currentInstruction]) {
+      speakText(INSTRUCTIONS[currentInstruction].description);
+    }
+  }, [currentInstruction, showInstructions]);
+
+  const initializeInstructions = () => {
+    setShowInstructions(true);
+    setCurrentInstruction(0);
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -86,15 +168,16 @@ export default function EnhancedEmojiTrainer() {
   const createEmoji = () => {
     const padding = 100;
     const eventType = Object.keys(EVENTS)[Math.floor(Math.random() * Object.keys(EVENTS).length)];
-
+    const baseSpeed = 1; // Define a constant base speed
+  
     return {
       id: Math.random().toString(36),
       x: Math.random() * (viewportSize.width - padding * 2) + padding - viewportSize.width / 2,
       y: Math.random() * (viewportSize.height - padding * 2) + padding - viewportSize.height / 2,
       size: Math.random() * 40 + 60,
       speed: {
-        x: (Math.random() - 0.5) * 2,
-        y: (Math.random() - 0.5) * 2,
+        x: (Math.random() - 0.5) * baseSpeed, // Use baseSpeed to control movement
+        y: (Math.random() - 0.5) * baseSpeed,
       },
       emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
       eventType,
@@ -107,6 +190,7 @@ export default function EnhancedEmojiTrainer() {
     setEmojis(prev => {
       const emoji = prev.find(e => e.id === emojiId);
       if (emoji && emoji.eventType === eventType) {
+        playSound('https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/select-sound-121244.mp3')
         setEventStats(stats => ({
           ...stats,
           [eventType]: stats[eventType] + 1
@@ -138,7 +222,7 @@ export default function EnhancedEmojiTrainer() {
 
     const animate = () => {
       if (!isPlaying) return;
-
+    
       setEmojis(prev => 
         prev.map(emoji => {
           const maxX = (viewportSize.width / 2) - emoji.size;
@@ -147,25 +231,31 @@ export default function EnhancedEmojiTrainer() {
           let newY = emoji.y + emoji.speed.y;
           let newSpeedX = emoji.speed.x;
           let newSpeedY = emoji.speed.y;
-
+    
+          // Add damping factor to prevent speed increase
+          const dampingFactor = 1.0;
+    
           if (Math.abs(newX) > maxX) {
             newX = maxX * Math.sign(newX);
-            newSpeedX = -emoji.speed.x;
+            newSpeedX = -emoji.speed.x * dampingFactor;
           }
           if (Math.abs(newY) > maxY) {
             newY = maxY * Math.sign(newY);
-            newSpeedY = -emoji.speed.y;
+            newSpeedY = -emoji.speed.y * dampingFactor;
           }
-
+    
           return {
             ...emoji,
             x: newX,
             y: newY,
-            speed: { x: newSpeedX, y: newSpeedY }
+            speed: { 
+              x: newSpeedX,
+              y: newSpeedY
+            }
           };
         })
       );
-
+    
       requestAnimationFrame(animate);
     };
 
@@ -190,7 +280,67 @@ export default function EnhancedEmojiTrainer() {
   };
 
   return (
-    <div ref={containerRef} className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50">
+    <div ref={containerRef} className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-">
+       <Dialog open={showCongrats} onOpenChange={setShowCongrats}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center tracking-tighter">🎉 Congratulations! 🎉</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-center text-lg mb-4">
+              You've mastered mouse events! Ready to take on keyboard challenges?
+            </p>
+            <div className="space-y-2">
+              <p className="text-center font-semibold">Your Achievement:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(EVENTS).map(([key, label]) => (
+                  <Badge key={key} variant="outline" className="justify-between">
+                    {label}: {eventStats[key]}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={proceedToNextLevel} className="w-full">
+              Proceed to Keyboard Challenge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Mouse Event Instructions</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="p-4">
+              <img
+                src={INSTRUCTIONS[currentInstruction]?.image}
+                alt={INSTRUCTIONS[currentInstruction]?.title}
+                className="w-full h-48 object-cover rounded-lg"
+              />
+              <h3 className="text-xl font-bold mt-4">{INSTRUCTIONS[currentInstruction]?.title}</h3>
+              <p className="mt-2">{INSTRUCTIONS[currentInstruction]?.description}</p>
+            </Card>
+            <Card className="p-4 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xl font-bold">Voice Instructions</h3>
+                <p className="mt-2">Listen to the instructions being read aloud.</p>
+              </div>
+              <Progress 
+                value={(currentInstruction / (INSTRUCTIONS.length - 1)) * 100} 
+                className="w-full mt-4"
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                {currentInstruction + 1} of {INSTRUCTIONS.length}
+              </p>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
       <div className="relative z-10 p-4 w-1/2 mx-[25%]">
         {isPlaying && (
           <Card className="p-4 mb-4">
@@ -239,17 +389,24 @@ export default function EnhancedEmojiTrainer() {
                   <p key={key}>{label}: {eventStats[key]}</p>
                 ))}
               </div>
-              {eventStats.click<=0 && eventStats.dblclick<=0 && eventStats.mouseover<=0 && (
+              {(eventStats.click <= 0 || eventStats.dblclick <= 0 || eventStats.mouseover <= 0 || eventStats.contextmenu <= 0) && (
+                <>
+                  <p className="text-red-500">
+                    {eventStats.click <= 0 && "You missed clicking. "}
+                    {eventStats.dblclick <= 0 && "You missed double-clicking. "}
+                    {eventStats.mouseover <= 0 && "You missed mouse-over. "}
+                  </p>
                   <Button onClick={startGame} className="w-full mt-4">
                     Try Again
                   </Button>
+                </>
               )}
-              {eventStats.click>0 && eventStats.dblclick>0 && eventStats.mouseover>0 && (
+              {eventStats.click>0 && eventStats.dblclick>0 && eventStats.mouseover>0 && eventStats.contextmenu >0 && (
                 <div className="flex gap-4">
-                  <Button className="flex-1">
+                  <Button className="flex-1" onClick={startGame}>
                     Try Again
                   </Button>
-                  <Button  className="flex-1" onClick={()=>{router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard')}}>
+                  <Button  className="flex-1" onClick={()=>{handleNextLevel()}}>
                       Next Level
                   </Button>
                 </div>
@@ -259,7 +416,7 @@ export default function EnhancedEmojiTrainer() {
         )}
 
         {!isPlaying && !gameCompleted && (
-          <Button onClick={startGame} className="w-full">
+          <Button onClick={initializeInstructions} className="w-full">
             Start Practice
           </Button>
         )}
