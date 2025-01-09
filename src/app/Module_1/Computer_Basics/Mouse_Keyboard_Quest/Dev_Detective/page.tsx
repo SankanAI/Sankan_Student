@@ -1,311 +1,353 @@
+// First, add type declarations for the Web Speech API
 "use client";
-import { useState, useEffect, useRef } from 'react';
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+  }
+}
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, FileText, GitBranch, Database } from 'lucide-react';
+import { Calculator, Code, Volume2, ArrowRight } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-// Define core types
-type TaskType = 'type' | 'click' | 'combined';
+type Operation = '+' | '-' | '*' | '/';
 
-interface Task {
-  id: string;
-  type: TaskType;
-  description: string;
-  action: string;
-  target?: string;
-  completed: boolean;
-}
+const MathDetective = () => {
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [firstNumber, setFirstNumber] = useState('');
+  const [secondNumber, setSecondNumber] = useState('');
+  const [operation, setOperation] = useState<Operation>('+');
+  const [result, setResult] = useState<number | null>(null);
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-interface GameLevel {
-  id: number;
-  name: string;
-  description: string;
-  tasks: Task[];
-  timeLimit: number;
-  requiredScore: number;
-}
-
-// Game levels configuration
-const LEVELS: GameLevel[] = [
-  {
-    id: 1,
-    name: "Basic Commands",
-    description: "Learn basic development commands",
-    tasks: [
-      {
-        id: "1-1",
-        type: "type",
-        description: "Print 'Hello World'",
-        action: "console.log('Hello World')",
-        completed: false
-      },
-      {
-        id: "1-2",
-        type: "click",
-        description: "Run the application",
-        action: "click",
-        target: "Run",
-        completed: false
-      },
-      {
-        id: "1-3",
-        type: "combined",
-        description: "Save and commit changes",
-        action: "git add . && git commit",
-        completed: false
-      }
-    ],
-    timeLimit: 60,
-    requiredScore: 3
-  }
-];
-
-export default function DevDetective() {
-  // Core game state
-  const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
-  const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const [userInput, setUserInput] = useState('');
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [gameCompleted, setGameCompleted] = useState(false);
-  const [taskHistory, setTaskHistory] = useState<string[]>([]);
-  
-  // Refs
-  const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Timer effect
   useEffect(() => {
-    if (isPlaying && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            endGame();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    // Initialize speech synthesis
+    speechRef.current = new SpeechSynthesisUtterance();
+    
+    // Initialize speech recognition
+    if (window.webkitSpeechRecognition) {
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.onresult = (event: any) => {
+        const result = event.results[0][0].transcript;
+        processVoiceCommand(result);
+      };
+      setRecognition(recognition);
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPlaying, timeLeft]);
-
-  // Game control functions
-  const endGame = () => {
-    setIsPlaying(false);
-    setGameCompleted(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
-  const getNextTask = () => {
-    const incompleteTasks = currentLevel.tasks.filter(task => !task.completed);
-    if (incompleteTasks.length === 0) return null;
-    return incompleteTasks[Math.floor(Math.random() * incompleteTasks.length)];
-  };
-
-  const startGame = () => {
-    // Reset game state
-    setIsPlaying(true);
-    setGameCompleted(false);
-    setScore(0);
-    setTimeLeft(currentLevel.timeLimit);
-    setTaskHistory([]);
-    // Reset task completion status
-    currentLevel.tasks.forEach(task => task.completed = false);
-    // Set first task
-    setCurrentTask(getNextTask());
-    setUserInput('');
-    if (inputRef.current) inputRef.current.focus();
-  };
-
-  // Task handling functions
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isPlaying || !currentTask) return;
-    setUserInput(e.target.value);
-  };
-
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentTask || !isPlaying) return;
-
-    if (currentTask.type === 'type' || currentTask.type === 'combined') {
-      if (userInput.trim() === currentTask.action) {
-        handleTaskComplete(currentTask);
+      if (speechRef.current && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
+    };
+  }, []);
+
+  // Rest of the component remains the same
+  const speak = (text: string) => {
+    if (speechRef.current && window.speechSynthesis) {
+      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+      speechRef.current.text = text;
+      window.speechSynthesis.speak(speechRef.current);
     }
   };
 
-  const handleClick = (target: string) => {
-    if (!currentTask || !isPlaying) return;
-
-    if ((currentTask.type === 'click' || currentTask.type === 'combined') && 
-        currentTask.target === target) {
-      handleTaskComplete(currentTask);
+  const processVoiceCommand = (command: string) => {
+    const numbers = command.match(/\d+/g);
+    if (numbers && numbers.length >= 2) {
+      setFirstNumber(numbers[0]);
+      setSecondNumber(numbers[1]);
+      speak(`Setting numbers to ${numbers[0]} and ${numbers[1]}`);
+    }
+    if (command.includes('plus') || command.includes('add')) {
+      setOperation('+');
+      speak('Setting operation to addition');
+    }
+    if (command.includes('minus') || command.includes('subtract')) {
+      setOperation('-');
+      speak('Setting operation to subtraction');
+    }
+    if (command.includes('multiply') || command.includes('times')) {
+      setOperation('*');
+      speak('Setting operation to multiplication');
+    }
+    if (command.includes('divide')) {
+      setOperation('/');
+      speak('Setting operation to division');
     }
   };
 
-  const handleTaskComplete = (task: Task) => {
-    // Mark task as completed
-    task.completed = true;
-    // Update score and history
-    setScore(prev => prev + 1);
-    setTaskHistory(prev => [...prev, task.description]);
+  const startListening = () => {
+    if (recognition) {
+      recognition.start();
+      speak('Listening for your command');
+    }
+  };
+
+  const playSound = (soundFile: string) => {
+    const audio = new Audio(soundFile);
+    audio.play();
+  };
+  
+
+  const calculateResult = () => {
+    const a = parseFloat(firstNumber);
+    const b = parseFloat(secondNumber);
     
-    // Check for level completion
-    if (score + 1 >= currentLevel.requiredScore) {
-      endGame();
-      return;
+    if (isNaN(a) || isNaN(b)) return;
+
+    let calculatedResult;
+    switch (operation) {
+      case '+': calculatedResult = a + b; break;
+      case '-': calculatedResult = a - b; break;
+      case '*': calculatedResult = a * b; break;
+      case '/': calculatedResult = b !== 0 ? a / b : null; break;
     }
 
-    // Get next task or end game if none left
-    const nextTask = getNextTask();
-    if (!nextTask) {
-      endGame();
-      return;
-    }
-
-    setCurrentTask(nextTask);
-    setUserInput('');
+    setResult(calculatedResult);
+    speak(`The result is ${calculatedResult}`);
+    setCurrentStep(4);
   };
 
-  const handleNextLevel = () => {
-    const nextLevelIndex = LEVELS.findIndex(level => level.id === currentLevel.id) + 1;
-    if (nextLevelIndex < LEVELS.length) {
-      setCurrentLevel(LEVELS[nextLevelIndex]);
-      setGameCompleted(false);
+  const generatePythonCode = () => {
+    const code = `a = ${firstNumber}
+      b = ${secondNumber}
+      c = a ${operation} b
+      print(c)  # Result: ${result}`;
+
+    setGeneratedCode(code);
+    speak('Python code has been generated');
+    playSound('https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/game-bonus-144751 (1).mp3')
+    setShowSuccess(true);
+  };
+
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return firstNumber !== '' && secondNumber !== '';
+      case 2:
+        return operation !== null;
+      case 3:
+        return result !== null;
+      default:
+        return false;
     }
   };
 
-  // UI helper function
-  const getTaskIcon = (type: TaskType) => {
-    switch (type) {
-      case 'type': return <Terminal className="w-5 h-5" />;
-      case 'click': return <FileText className="w-5 h-5" />;
-      case 'combined': return <GitBranch className="w-5 h-5" />;
-      default: return <Database className="w-5 h-5" />;
+  const handleNext = () => {
+    if (canProceedToNext()) {
+      setCurrentStep(prev => prev + 1);
+      speak(`Moving to step ${currentStep + 1}`);
     }
   };
 
+  // JSX remains the same
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="w-2/4 ml-[25%] mx-auto space-y-4">
+        {/* Instructions Dialog */}
+        <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Welcome to Math Detective! 🔢</DialogTitle>
+              <AlertDescription className="space-y-4">
+                <p>Follow these steps:</p>
+                <ol className="list-decimal pl-4 space-y-2">
+                  <li>Step 1: Enter two variables (a, b)</li>
+                  <li>Step 2: Choose the operation</li>
+                  <li>Step 3: Calculate the result</li>
+                  <li>Step 4: Generate Python code</li>
+                </ol>
+                <Button onClick={() => {
+                  setShowInstructions(false);
+                  speak('Welcome to Math Detective! Let\'s get started with step 1');
+                }}>
+                  Get Started
+                </Button>
+              </AlertDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+
         <Card className="p-6">
-          <h1 className="text-2xl font-bold text-center mb-4">Dev Detective</h1>
+          <h1 className="text-2xl font-bold text-center mb-6 tracking-tighter">Math Detective</h1>
           
-          {/* Game UI - Active Game */}
-          {isPlaying && currentTask && (
-            <div className="space-y-4">
-              {/* Game Stats */}
-              <div className="flex justify-between items-center">
-                <Badge variant="outline">Level {currentLevel.id}</Badge>
-                <Badge variant="outline">Score: {score}/{currentLevel.requiredScore}</Badge>
-                <Badge variant="outline">Time: {timeLeft}s</Badge>
-              </div>
-              
-              <Progress value={(timeLeft / currentLevel.timeLimit) * 100} className="w-full" />
-              
-              {/* Current Task */}
-              <div className="bg-slate-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  {getTaskIcon(currentTask.type)}
-                  <span className="font-medium">{currentTask.description}</span>
+          {/* Voice Control Button */}
+          <Button 
+            onClick={startListening}
+            className="mb-4 gap-2"
+            variant="outline"
+          >
+            <Volume2 className="w-4 h-4" />
+            Voice Command
+          </Button>
+          
+          {/* Step Progress */}
+          <div className="flex justify-between mb-8">
+            {[1, 2, 3, 4].map((step) => (
+              <div 
+                key={step}
+                className={`flex items-center ${step <= currentStep ? 'text-blue-600' : 'text-gray-400'}`}
+              >
+                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center
+                  ${step <= currentStep ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
+                  {step}
                 </div>
-                
-                {/* Task Input */}
-                {(currentTask.type === 'type' || currentTask.type === 'combined') && (
-                  <form onSubmit={handleInputSubmit}>
+                {step < 4 && <ArrowRight className="mx-2" />}
+              </div>
+            ))}
+          </div>
+          
+          <div className="space-y-6">
+            {/* Step 1: Variable Declaration */}
+            {currentStep >= 1 && (
+              <div className={`transition-opacity ${currentStep === 1 ? 'opacity-100' : 'opacity-70'}`}>
+                <h2 className="text-lg font-semibold mb-4">Step 1: Declare Variables</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Variable a</label>
                     <input
-                      ref={inputRef}
-                      type="text"
-                      value={userInput}
-                      onChange={handleInputChange}
-                      className="w-full p-2 font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Type your command here..."
-                      autoFocus
+                      type="number"
+                      value={firstNumber}
+                      onChange={(e) => setFirstNumber(e.target.value)}
+                      className="w-full p-2 border rounded"
+                      placeholder="Enter first number"
+                      disabled={currentStep !== 1}
                     />
-                  </form>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Variable b</label>
+                    <input
+                      type="number"
+                      value={secondNumber}
+                      onChange={(e) => setSecondNumber(e.target.value)}
+                      className="w-full p-2 border rounded"
+                      placeholder="Enter second number"
+                      disabled={currentStep !== 1}
+                    />
+                  </div>
+                </div>
+                {currentStep === 1 && (
+                  <Button 
+                    onClick={handleNext}
+                    className="mt-4"
+                    disabled={!canProceedToNext()}
+                  >
+                    Next Step
+                  </Button>
                 )}
-                
-                {/* Click Actions */}
-                {(currentTask.type === 'click' || currentTask.type === 'combined') && (
-                  <div className="flex gap-2 mt-2">
-                    {currentTask.target && (
-                      <Button onClick={() => handleClick(currentTask.target!)}>
-                        {currentTask.target}
-                      </Button>
-                    )}
+              </div>
+            )}
+
+            {/* Step 2: Operation Selection */}
+            {currentStep >= 2 && (
+              <div className={`transition-opacity ${currentStep === 2 ? 'opacity-100' : 'opacity-70'}`}>
+                <h2 className="text-lg font-semibold mb-4">Step 2: Choose Operation</h2>
+                <div className="flex gap-2">
+                  {(['+', '-', '*', '/'] as Operation[]).map((op) => (
+                    <Button
+                      key={op}
+                      onClick={() => {
+                        setOperation(op);
+                        speak(`Selected operation ${op}`);
+                      }}
+                      variant={operation === op ? "default" : "outline"}
+                      className="flex-1"
+                      disabled={currentStep !== 2}
+                    >
+                      {op}
+                    </Button>
+                  ))}
+                </div>
+                {currentStep === 2 && (
+                  <Button 
+                    onClick={handleNext}
+                    className="mt-4"
+                    disabled={!canProceedToNext()}
+                  >
+                    Next Step
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Calculate */}
+            {currentStep >= 3 && (
+              <div className={`transition-opacity ${currentStep === 3 ? 'opacity-100' : 'opacity-70'}`}>
+                <h2 className="text-lg font-semibold mb-4">Step 3: Calculate Result</h2>
+                <Button 
+                  onClick={calculateResult}
+                  className="gap-2 w-full"
+                  disabled={currentStep !== 3}
+                >
+                  <Calculator className="w-4 h-4" />
+                  Calculate
+                </Button>
+                {result !== null && (
+                  <Alert className="mt-4">
+                    <AlertTitle>Result</AlertTitle>
+                    <AlertDescription>
+                      {firstNumber} {operation} {secondNumber} = {result}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Generate Code */}
+            {currentStep >= 4 && (
+              <div className={`transition-opacity ${currentStep === 4 ? 'opacity-100' : 'opacity-70'}`}>
+                <h2 className="text-lg font-semibold mb-4">Step 4: Generate Python Code</h2>
+                <Button 
+                  onClick={generatePythonCode}
+                  className="gap-2 w-full"
+                  disabled={result === null}
+                >
+                  <Code className="w-4 h-4" />
+                  Generate Code
+                </Button>
+                {generatedCode && (
+                  <div className="mt-4">
+                    <h3 className="font-medium mb-2">Generated Python Code:</h3>
+                    <pre className="bg-slate-100 p-4 rounded-lg overflow-x-auto">
+                      <code>{generatedCode}</code>
+                    </pre>
                   </div>
                 )}
               </div>
-
-              {/* Task History */}
-              <div className="mt-4">
-                <h3 className="font-medium mb-2">Task History:</h3>
-                <div className="bg-slate-50 p-2 rounded max-h-32 overflow-y-auto">
-                  {taskHistory.map((task, index) => (
-                    <div key={index} className="text-sm text-gray-600 mb-1">
-                      ✓ {task}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Level Info */}
-          {!isPlaying && !gameCompleted && (
-            <Alert className="mb-4">
-              <AlertTitle>{currentLevel.name}</AlertTitle>
-              <AlertDescription>
-                {currentLevel.description}
-                <div className="mt-2">
-                  Complete {currentLevel.requiredScore} tasks in {currentLevel.timeLimit} seconds
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Game Over */}
-          {gameCompleted && (
-            <Alert className="mb-4">
-              <AlertTitle>
-                {score >= currentLevel.requiredScore ? "Level Complete! 🎉" : "Try Again!"}
-              </AlertTitle>
-              <AlertDescription className="space-y-4">
-                <div>
-                  Final Score: {score}/{currentLevel.requiredScore}
-                  <br />
-                  Tasks Completed: {taskHistory.length}
-                </div>
-                <div className="flex gap-4">
-                  <Button onClick={startGame} className="flex-1">
-                    Try Again
-                  </Button>
-                  {score >= currentLevel.requiredScore && currentLevel.id < LEVELS.length && (
-                    <Button onClick={handleNextLevel} className="flex-1">
-                      Next Level
-                    </Button>
-                  )}
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Start Button */}
-          {!isPlaying && !gameCompleted && (
-            <Button onClick={startGame} className="w-full">
-              Start Level {currentLevel.id}
-            </Button>
-          )}
+            )}
+          </div>
         </Card>
+
+        {/* Success Dialog */}
+        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Congratulations! 🎉</DialogTitle>
+              <AlertDescription>
+                {"You've successfully completed all steps and generated the Python code! \nFeel free to try different numbers and operations."}
+              </AlertDescription>
+            </DialogHeader>
+            <Button>
+              Next Level
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
-}
+};
+
+export default MathDetective;
