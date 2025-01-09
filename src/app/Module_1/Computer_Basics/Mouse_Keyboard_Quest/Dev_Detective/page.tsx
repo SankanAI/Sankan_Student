@@ -49,8 +49,56 @@ const MathDetective = () => {
     }
 
     return () => {
+<<<<<<< HEAD
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isPlaying, timeLeft]);
+
+  // Game control functions
+  const endGame = () => {
+    setIsPlaying(false);
+    setGameCompleted(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const getNextTask = () => {
+    const incompleteTasks = currentLevel.tasks.filter(task => !task.completed);
+    if (incompleteTasks.length === 0) return null;
+    return incompleteTasks[Math.floor(Math.random() * incompleteTasks.length)];
+  };
+
+  const startGame = () => {
+    // Reset game state
+    setIsPlaying(true);
+    setGameCompleted(false);
+    setScore(0);
+    setTimeLeft(currentLevel.timeLimit);
+    setTaskHistory([]);
+    // Reset task completion status
+    currentLevel.tasks.forEach(task => task.completed = false);
+    // Set first task
+    setCurrentTask(getNextTask());
+    setUserInput('');
+    if (inputRef.current) inputRef.current.focus();
+  };
+
+  // Task handling functions
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isPlaying || !currentTask) return;
+    setUserInput(e.target.value);
+  };
+
+  const handleInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTask || !isPlaying) return;
+
+    if (currentTask.type === 'type' || currentTask.type === 'combined') {
+      if (userInput.trim() === currentTask.action) {
+        handleTaskComplete(currentTask);
+=======
       if (speechRef.current && window.speechSynthesis) {
         window.speechSynthesis.cancel();
+>>>>>>> version_0.1
       }
     };
   }, []);

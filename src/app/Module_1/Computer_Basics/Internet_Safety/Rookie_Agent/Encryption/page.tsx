@@ -6,11 +6,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-    ShieldCheck, Key, Lock, Link, Atom, Eye,  Swords, Fingerprint, ScrollText, BookOpen, Crown, Target 
+    ShieldCheck, Key, Lock, Link, Atom, Eye,  Swords, Fingerprint, Crown
 } from "lucide-react";
 
 // Define types for modules and challenges
@@ -44,11 +43,11 @@ type Module = {
 };
 
 // Define props for functional components if needed
-type ModuleCardProps = {
-  module: Module;
-  progress: number;
-  onClick: () => void;
-};
+// type ModuleCardProps = {
+//   module: Module;
+//   progress: number;
+//   onClick: () => void;
+// };
 
 const modules: Module[] = [
     {
@@ -318,6 +317,7 @@ const EncryptionLearningPortal: React.FC = () => {
   const handleModuleClick = (module: Module) => {
     setSelectedModule(module);
     setShowDialog(true);
+    setCurrentChallenge(0);
   };
 
   const handleAnswerSubmit = (moduleId: string, isCorrect: boolean) => {

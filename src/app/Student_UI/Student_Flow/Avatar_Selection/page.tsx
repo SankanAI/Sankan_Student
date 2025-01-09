@@ -2,7 +2,7 @@
 
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
-import { Search, Check } from "lucide-react"
+import { Check } from "lucide-react"
 import { useState } from "react"
 import {
   Dialog,

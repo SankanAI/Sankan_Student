@@ -1,8 +1,8 @@
 "use client";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
-import { Search, Check } from "lucide-react"
-import { useState } from "react"
+import { Check } from "lucide-react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -150,6 +150,8 @@ export default function TeacherGallery() {
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingTeacher, setConfirmingTeacher] = useState<TeacherProfile | null>(null);
   const router=useRouter();
+
+  useEffect(()=>{ },[router])
 
   const handleTeacherClick = (teacher: TeacherProfile) => {
     setConfirmingTeacher(teacher);

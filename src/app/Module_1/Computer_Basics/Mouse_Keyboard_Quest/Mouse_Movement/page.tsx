@@ -163,7 +163,7 @@ export default function EnhancedEmojiTrainer() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, timeLeft]);
 
   const createEmoji = () => {
     const padding = 100;

@@ -23,12 +23,30 @@ import {
 } from "@/components/ui/dialog";
 
 // Types
+interface FirewallRule {
+  source: string;
+  destination: string;
+  port: string;
+  action: 'allow' | 'deny' | '';
+  protocol: 'tcp' | 'udp' | 'icmp' | '';
+}
+
+interface ZoneConfig {
+  zone_name: string;
+  security_level: string;
+  interfaces: string[];
+  allowed_services: string[];
+}
+
+type ExerciseTemplate = FirewallRule | ZoneConfig;
+
+// Types
 interface Exercise {
-  type: string;
+  type: 'rule-creation' | 'zone-config' | 'policy-config';
   title: string;
   description: string;
-  template?: Record<string, any>;
-  solution?: Record<string, any>;
+  template?: ExerciseTemplate;
+  solution?: ExerciseTemplate;
 }
 
 interface Module {
@@ -47,7 +65,7 @@ interface ModuleDialogProps {
 
 interface RuleCreationExerciseProps {
   exercise: Exercise;
-  onComplete: (result: Record<string, any>) => void;
+  onComplete: (result: FirewallRule) => void;
 }
 
 const modules: Module[] = [
@@ -113,29 +131,35 @@ const modules: Module[] = [
 ];
 
 const ModuleDialog: React.FC<ModuleDialogProps> = ({ module, open, onClose }) => (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{module.title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <DialogDescription>
-            {module.description}
-          </DialogDescription>
-          <Alert>
-            <AlertDescription>
-              This module will teach you how to configure {module.title.toLowerCase()} 
-              in a firewall. Complete the exercises to learn practical implementation.
-            </AlertDescription>
-          </Alert>
-        </div>
-        <Button onClick={onClose}>Start Module</Button>
-      </DialogContent>
-    </Dialog>
-  );
+  <Dialog open={open} onOpenChange={onClose}>
+    <DialogContent className="max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>{module.title}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <DialogDescription>
+          {module.description}
+        </DialogDescription>
+        <Alert>
+          <AlertDescription>
+            This module will teach you how to configure {module.title.toLowerCase()} 
+            in a firewall. Complete the exercises to learn practical implementation.
+          </AlertDescription>
+        </Alert>
+      </div>
+      <Button onClick={onClose}>Start Module</Button>
+    </DialogContent>
+  </Dialog>
+);
 
 const RuleCreationExercise: React.FC<RuleCreationExerciseProps> = ({ exercise, onComplete }) => {
-  const [rule, setRule] = useState(exercise.template || {});
+  const [rule, setRule] = useState<FirewallRule>(exercise.template as FirewallRule || {
+    source: '',
+    destination: '',
+    port: '',
+    action: '',
+    protocol: ''
+  });
 
   return (
     <Card className="p-4 space-y-4">
@@ -174,7 +198,7 @@ const RuleCreationExercise: React.FC<RuleCreationExerciseProps> = ({ exercise, o
           <Label>Protocol</Label>
           <Select 
             value={rule.protocol}
-            onValueChange={(value) => setRule({...rule, protocol: value})}
+            onValueChange={(value: 'tcp' | 'udp' | 'icmp') => setRule({...rule, protocol: value})}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select protocol" />
@@ -192,7 +216,7 @@ const RuleCreationExercise: React.FC<RuleCreationExerciseProps> = ({ exercise, o
         <Label>Action:</Label>
         <Select 
           value={rule.action}
-          onValueChange={(value) => setRule({...rule, action: value})}
+          onValueChange={(value: 'allow' | 'deny') => setRule({...rule, action: value})}
         >
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Select action" />
@@ -224,13 +248,12 @@ const FirewallTraining: React.FC = () => {
     setShowDialog(true);
   };
 
-  const handleExerciseComplete = (result: Record<string, any>) => {
+  const handleExerciseComplete = () => {
     if (currentModule) {
       setProgress({
         ...progress,
         [currentModule.id]: true
       });
-      // Add validation and feedback logic here
     }
   };
 

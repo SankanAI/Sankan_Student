@@ -1,11 +1,12 @@
 import React from 'react';
-import { ScrollText, Award, Sword, Target, BookOpen, Trophy, Star, Timer } from 'lucide-react';
+import { ScrollText, Award, Target, Trophy, Star, Timer } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Image from "next/image";
 
 
 // Mock data for the dashboard
@@ -102,9 +103,11 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                <img 
+                <Image
                   src={studentData.guide.image} 
                   alt={studentData.guide.name}
+                  width={230}
+                  height={230}
                   className="w-16 h-20 rounded-lg object-cover"
                 />
                 <div>

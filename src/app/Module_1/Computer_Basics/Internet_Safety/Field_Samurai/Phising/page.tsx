@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Mail, AlertTriangle, Shield, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Mail, AlertTriangle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
@@ -50,7 +50,7 @@ If you don't verify within 24 hours, your account will be suspended.
 Best regards,
 Security Team`,
     threats: [
-      { id: 'spoofed-domain', type: 'Spoofed Domain', description: 'Notice the number "1" in Apple' },
+      { id: 'spoofed-domain', type: 'Spoofed Domain', description: 'Notice the number &quot;1&quot; in Apple' },
       { id: 'urgency', type: 'False Urgency', description: 'Creating panic with time pressure' },
       { id: 'suspicious-link', type: 'Suspicious Link', description: 'Misleading URL in link' }
     ],
@@ -206,7 +206,7 @@ const PhishingGame = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-100 p-4 rounded my-2">
-              "{selectedText}"
+            &quot;{selectedText}&quot;
             </div>
             <DialogDescription>
               Why is this text suspicious?
@@ -237,7 +237,7 @@ const PhishingGame = () => {
             <DialogDescription>
               Final Score: {score} points
             </DialogDescription>
-            <p>You've successfully completed the phishing email detection training.</p>
+            <p>You&apos;ve successfully completed the phishing email detection training.</p>
             <Button onClick={() => window.location.reload()}>
               Start New Training
             </Button>

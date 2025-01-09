@@ -278,7 +278,7 @@ const ProjectLearningInterface = () => {
   const validateStructure = () => {
     if (!selectedProject) return;
     
-    const errors: string[] = [];
+    const results: ValidationResult[] = [];
     const template = projectTemplates[selectedProject].structure;
     
     const findItem = (items: FolderItem[], name: string, parentId: string | null): FolderItem | undefined => {
@@ -290,18 +290,29 @@ const ProjectLearningInterface = () => {
         if (required.required) {
           const item = findItem(items, required.name, parentId);
           if (!item) {
-            errors.push(`Missing ${required.type}: ${path}${required.name}`);
+            results.push({
+              message: `Missing ${required.type}: ${path}${required.name}`,
+              type: 'error'
+            });
           } else if (required.children) {
             validateRecursive(required.children, item.id, `${path}${required.name}/`);
           }
         }
       });
     };
-
+  
     validateRecursive(template);
-    setValidationResults(errors);
+    setValidationResults(results);
     setShowValidationDialog(true);
-    const isComplete = errors.length === 0;
+    const isComplete = results.length === 0;
+    
+    if (isComplete) {
+      results.push({
+        message: "All required files and folders are present",
+        type: 'success'
+      });
+    }
+  
     setCompletedProjects(prev => ({
       ...prev,
       [selectedProject]: isComplete
@@ -548,22 +559,30 @@ const ProjectLearningInterface = () => {
               <CheckCircle className="h-4 w-4 text-green-500" />
               <AlertTitle>Perfect Match!</AlertTitle>
               <AlertDescription>
-                Congratulations! Your project structure matches all requirements. You're ready to start coding!
+                Congratulations! Your project structure matches all requirements. You&apos;re ready to start coding!
               </AlertDescription>
             </Alert>
           ) : (
-            <Alert className="bg-red-50 border-red-200">
-              <XCircle className="h-4 w-4 text-red-500" />
-              <AlertTitle>Structure Incomplete</AlertTitle>
-              <AlertDescription>
-                <p className="mb-2">The following items are missing:</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  {validationResults.map((error, index) => (
-                    <li key={index} className="text-red-600">{error}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-4">
+              {validationResults.map((result, index) => (
+                <Alert 
+                  key={index} 
+                  className={result.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}
+                >
+                  {result.type === 'success' ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                  <AlertTitle>
+                    {result.type === 'success' ? 'Success' : 'Missing Item'}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {result.message}
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </div>
           )}
           <DialogFooter>
             <Button onClick={() => setShowValidationDialog(false)}>
