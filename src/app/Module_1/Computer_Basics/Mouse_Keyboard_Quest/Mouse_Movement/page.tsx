@@ -96,7 +96,7 @@ export default function EnhancedEmojiTrainer() {
     router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard');
   };
 
-  const speakText = (text: string) => {
+  const speakText = useCallback((text: string) => {
     if (speechRef.current) {
       window.speechSynthesis.cancel();
       speechRef.current.text = text;
@@ -110,7 +110,7 @@ export default function EnhancedEmojiTrainer() {
       };
       window.speechSynthesis.speak(speechRef.current);
     }
-  };
+  }, [currentInstruction]);
 
   const playSound = (soundFile: string) => {
     const audio = new Audio(soundFile);
@@ -288,7 +288,7 @@ export default function EnhancedEmojiTrainer() {
           </DialogHeader>
           <div className="py-4">
             <p className="text-center text-lg mb-4">
-              You've mastered mouse events! Ready to take on keyboard challenges?
+              {"You've mastered mouse events! Ready to take on keyboard challenges?"}
             </p>
             <div className="space-y-2">
               <p className="text-center font-semibold">Your Achievement:</p>
@@ -365,7 +365,7 @@ export default function EnhancedEmojiTrainer() {
           <Alert className="mb-4">
             <AlertTitle>Reminder</AlertTitle>
             <AlertDescription>
-              Try using all different types of interactions! Each emoji can be interacted with in different ways.
+             {" Try using all different types of interactions! Each emoji can be interacted with in different ways."}
             </AlertDescription>
           </Alert>
         )}
@@ -374,8 +374,7 @@ export default function EnhancedEmojiTrainer() {
           <Alert className="mb-4">
             <AlertTitle className="text-2xl font-bold ">Welcome to Event Practice!</AlertTitle>
             <AlertDescription>
-              Practice different mouse events: left click, right click, double click, and mouse over.
-              Watch for the instruction above each emoji to know which event to use!
+              {"Practice different mouse events: left click, right click, double click, and mouse over.\nWatch for the instruction above each emoji to know which event to use!"}
             </AlertDescription>
           </Alert>
         )}

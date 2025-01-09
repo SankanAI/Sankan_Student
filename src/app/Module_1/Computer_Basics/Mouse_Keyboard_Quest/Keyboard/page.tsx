@@ -298,7 +298,7 @@ export default function TypingTriumph() {
                   <DialogTitle>Congratulations! 🎉</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
-                  <p>You've mastered all typing levels! Ready for your next challenge?</p>
+                  <p>{"You've mastered all typing levels! Ready for your next challenge?"}</p>
                 </div>
                 <Button onClick={() => router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Dev_Detective')}>
                   Continue to Dev Detective
