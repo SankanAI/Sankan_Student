@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import Cookies from "js-cookie";
 
 const EVENTS = {
   click: 'Left Click',
@@ -54,11 +56,29 @@ type EmojiBubble = {
   eventType: string;
 };
 
+type MouseRecord = {
+  id: string;
+  mouse_keyboard_quest_id: string;
+  student_id: string;
+  click_completed: boolean;
+  dblclick_completed: boolean;
+  context_menu_completed: boolean;
+  mouse_over_completed: boolean;
+  completed: boolean;
+  started_at: string;  // TIMESTAMP WITH TIME ZONE will be returned as ISO string
+  completed_at: string | null;  // Can be null if not completed
+  last_activity: string;  // TIMESTAMP WITH TIME ZONE
+};
 
 export default function EnhancedEmojiTrainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [emojis, setEmojis] = useState<EmojiBubble[]>([]);
   const router = useRouter();
+  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
+  const [userId, setUserId] = useState<string | null>(null);
+  const params = useSearchParams();
+  const [progressRecord, setProgressRecord] = useState<MouseRecord | null>(null);
+  const supabase = createClientComponentClient();
   const [eventStats, setEventStats] = useState<EventStats>({
     click: 0,
     contextmenu: 0,
@@ -75,7 +95,189 @@ export default function EnhancedEmojiTrainer() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
+  const [isMouseMovementCompleted, setIsMouseMovementCompleted] = useState(false);
   const initialBubbleCount = 5;
+
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+  const decryptData = (encryptedText: string): string => {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return ''; 
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+
+  const updateProgress = async (stats: EventStats) => {
+    if (!progressRecord || !userId) return;
+
+    const updates: Partial<MouseRecord> = {
+      click_completed: stats.click > 0,
+      dblclick_completed: stats.dblclick > 0,
+      context_menu_completed: stats.contextmenu > 0,
+      mouse_over_completed: stats.mouseover > 0,
+      last_activity: new Date().toISOString()
+    };
+
+    // Check if all events are completed
+    const allCompleted = Object.values(stats).every(count => count > 0);
+    if (allCompleted) {
+      updates.completed = true;
+      updates.completed_at = new Date().toISOString();
+    }
+
+    try {
+      const { error } = await supabase
+        .from('mouse_movement')
+        .update(updates)
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      if (allCompleted) {
+        // Update mouse_keyboard_quest completion if needed
+        const { error: questError } = await supabase
+          .from('mouse_keyboard_quest')
+          .update({
+            completed: true,
+            completed_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          })
+          .eq('id', progressRecord.mouse_keyboard_quest_id);
+
+        if (questError) throw questError;
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+    }
+  };
+
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+      // Check for existing computer_basics record
+      let { data: computerBasicsData } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+  
+      // Create computer_basics record if it doesn't exist
+      if (!computerBasicsData) {
+        const { data: newComputerBasics, error: computerBasicsError } = await supabase
+          .from('computer_basics')
+          .insert([{
+            student_id: studentId,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+  
+        if (computerBasicsError) throw computerBasicsError;
+        computerBasicsData = newComputerBasics;
+      }
+  
+      // Check for existing mouse_keyboard_quest record
+      let { data: questData } = await supabase
+        .from('mouse_keyboard_quest')
+        .select('id')
+        .eq('computer_basics_id', computerBasicsData?.id)
+        .eq('student_id', studentId)
+        .single();
+  
+      // Create mouse_keyboard_quest record if it doesn't exist
+      if (!questData) {
+        const { data: newQuest, error: questError } = await supabase
+          .from('mouse_keyboard_quest')
+          .insert([{
+            computer_basics_id: computerBasicsData?.id,
+            student_id: studentId,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+  
+        if (questError) throw questError;
+        questData = newQuest;
+      }
+  
+      // Check for existing mouse_movement record
+      const { data: existingRecord } = await supabase
+        .from('mouse_movement')
+        .select('*')
+        .eq('mouse_keyboard_quest_id', questData?.id)
+        .eq('student_id', studentId)
+        .single();
+  
+      if (existingRecord) {
+        setProgressRecord(existingRecord);
+      } else {
+        // Create new mouse_movement record
+        const { data: newRecord, error: movementError } = await supabase
+          .from('mouse_movement')
+          .insert([{
+            mouse_keyboard_quest_id: questData?.id,
+            student_id: studentId,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString(),
+            click_completed: false,
+            dblclick_completed: false,
+            context_menu_completed: false,
+            mouse_over_completed: false,
+            completed: false
+          }])
+          .select()
+          .single();
+  
+        if (movementError) throw movementError;
+        if (newRecord) {
+          setProgressRecord(newRecord);
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing progress record:', error);
+      // Handle error appropriately - maybe show an error message to the user
+    }
+  };
+
+  useEffect(()=>{
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: mouseMovementData, error } = await supabase
+          .from('mouse_movement')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (mouseMovementData?.completed) {
+          setIsMouseMovementCompleted(true);
+          router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard');
+        }
+      } catch (error) {
+        console.error('Error checking completion status:', error);
+      }
+    };
+
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
+      setUserId(decryptedId);
+      checkCompletion(decryptedId);
+      if (!isMouseMovementCompleted) {
+        initializeProgressRecord(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
+    }
+  },[userId])
 
   useEffect(() => {
     speechRef.current = new SpeechSynthesisUtterance();
@@ -87,6 +289,7 @@ export default function EnhancedEmojiTrainer() {
   }, []);
 
   const handleNextLevel = () => {
+    updateProgress(eventStats)
     playSound('https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/game-bonus-144751 (1).mp3')
     setShowCongrats(true);
   };

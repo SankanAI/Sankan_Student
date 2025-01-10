@@ -1,9 +1,9 @@
 "use client";
-
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams} from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import Cookies from "js-cookie";
 
 interface SamuraiImage {
     id: string
@@ -39,7 +41,7 @@ const samuraiImages: SamuraiImage[] = [
     },
     { 
       id: "3", 
-      url: "https://cdn.usegalileo.ai/sdxl10/7a328040-18ee-42b1-91a9-8415f9765e04.png",
+      url: "https://cdn.usegalileo.ai/sdxl10/7a328040-18ee-42b1-91a9-8415f9765e04.png", 
       name: "Tokugawa Ieyasu",
       battlesFought: 38,
       battlesWon: 35
@@ -107,17 +109,9 @@ const samuraiImages: SamuraiImage[] = [
       battlesFought: 31,
       battlesWon: 28
     },
-  ]
+]
 
-const SamuraiCard = ({ 
-  samurai, 
-  isSelected, 
-  onClick 
-}: { 
-  samurai: SamuraiImage; 
-  isSelected: boolean;
-  onClick: () => void;
-}) => {
+const SamuraiCard = ({ samurai, isSelected, onClick }: { samurai: SamuraiImage; isSelected: boolean; onClick: () => void; }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -159,24 +153,134 @@ export default function SamuraiGallery() {
   const [selectedSamurai, setSelectedSamurai] = useState<SamuraiImage | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingSamurai, setConfirmingSamurai] = useState<SamuraiImage | null>(null);
-  const router=useRouter();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userid, setuserid]=useState<string>("");
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+  const [isChecking, setIsChecking] = useState(true);
+  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
+  const params = useSearchParams();
+  
+  // Extract parameters from URL
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+  const decryptData = (encryptedText: string): string => {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return ''; 
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+  const checkAvatarStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('avatar')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error checking avatar status:", error);
+        throw error;
+      }
+
+      if (data && data.avatar !== "default-avatar-url") {
+        router.push(`/Student_UI/Student_Flow/Teacher_Selection?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+      }
+    } catch (err) {
+      console.error("Error in checkAvatarStatus:", err);
+      setError(err instanceof Error ? err.message : 'Failed to check avatar status');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  useEffect(()=>{
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
+      setuserid(decryptedId);
+      checkAvatarStatus(decryptedId);
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
+    }
+  },[userid, isChecking])
+
+
+  const updateStudentAvatar = async (samuraiName: string) => {
+    setIsUpdating(true);
+    setError(null);
+    
+    try {
+      console.log("Updating avatar for user:", userid);
+      console.log("New avatar name:", samuraiName);
+      
+      const { data, error: updateError } = await supabase
+        .from('students')
+        .update({ avatar: samuraiName })
+        .eq('id', userid)
+        .select();
+      
+      console.log("Update response:", data);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
+        throw updateError;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error("Error in updateStudentAvatar:", err);
+      setError(err instanceof Error ? err.message : 'Failed to update avatar');
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+};
 
   const handleSamuraiClick = (samurai: SamuraiImage) => {
     setConfirmingSamurai(samurai);
     setShowDialog(true);
   };
 
-  const handleConfirmSelection = () => {
-    setSelectedSamurai(confirmingSamurai);
-    setShowDialog(false);
+  const handleConfirmSelection = async () => {
+    if (!confirmingSamurai) return;
+    
+    const success = await updateStudentAvatar(confirmingSamurai.name);
+    
+    if (success) {
+      setSelectedSamurai(confirmingSamurai);
+      setShowDialog(false);
+    }
   };
+
+  if (!principalId || !schoolId || !teacherId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
+        <Alert variant="destructive">
+          <AlertDescription>Missing required parameters</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#221111]">
       <div className="flex h-full grow flex-col">
-        
         <div className="flex flex-1 justify-center px-40 py-0">
           <div className="flex w-[512px] flex-1 flex-col py-5">
+            {error && (
+              <div className="px-4 py-2 mb-4 text-red-500 bg-red-100 rounded">
+                {error}
+              </div>
+            )}
+            
             <div className="flex justify-between items-center px-4 pb-3 pt-5">
               <h2 className="text-left text-[28px] font-bold leading-tight tracking-tight text-white">
                 Choose your samurai
@@ -207,12 +311,13 @@ export default function SamuraiGallery() {
             </div>
 
             <div className="flex justify-end px-4 py-3">
-              <Button 
-                className="h-10 min-w-[84px] max-w-[480px] bg-[#472424] font-bold tracking-tight"
-                onClick={()=>{router.push('/Student_UI/Student_Flow/Teacher_Selection')}}
-              >
-                Next
-              </Button>
+            <Button 
+              className="h-10 min-w-[84px] max-w-[480px] bg-[#472424] font-bold tracking-tight"
+              onClick={() => router.push(`/Student_UI/Student_Flow/Teacher_Selection?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+              disabled={!selectedSamurai || isUpdating}
+            >
+              {isUpdating ? 'Updating...' : 'Next'}
+            </Button>
             </div>
           </div>
         </div>
@@ -230,14 +335,16 @@ export default function SamuraiGallery() {
             <Button
               type="submit"
               onClick={handleConfirmSelection}
+              disabled={isUpdating}
               className="bg-[#1e40af] hover:bg-[#331111]"
             >
-              Confirm
+              {isUpdating ? 'Confirming...' : 'Confirm'}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={() => setShowDialog(false)}
+              disabled={isUpdating}
               className="text-white bg-[#be123c] hover:bg-[#331111]"
             >
               Cancel
@@ -246,5 +353,5 @@ export default function SamuraiGallery() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

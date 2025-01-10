@@ -11,7 +11,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import {useRouter} from "next/navigation";
+import {useRouter,  useSearchParams} from "next/navigation";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import Cookies from "js-cookie";
 
 interface TeacherProfile {
     id: string
@@ -81,8 +83,8 @@ const teacherProfiles: TeacherProfile[] = [
     { 
       id: "7", 
       url: "https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/7thss.jpg",
-      name: "Sensei Iizasa Choisai",
-      specialty: "Tenshin Shoden Katori Shinto-ryu",
+      name: "Miyamoto Musashi",
+      specialty: "Katori Shinto-ryu",
       yearsTeaching: 50,
       studentsTrained: 334,
       notableStudents: ["Tsukahara Bokuden", "Matsumoto Bizen"]
@@ -90,11 +92,11 @@ const teacherProfiles: TeacherProfile[] = [
     { 
       id: "8", 
       url: "https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/8thss.jpg",
-      name: "Sensei Iizasa Choisai",
-      specialty: "Tenshin Shoden Katori Shinto-ryu",
+      name: "Yagyū Munenori",
+      specialty: "Tenshin Shinto-ryu",
       yearsTeaching: 50,
       studentsTrained: 334,
-      notableStudents: ["Tsukahara Bokuden", "Matsumoto Bizen"]
+      notableStudents: ["Sanada Yukimura", "Matsumoto Bizen"]
     }
 ]
 
@@ -150,6 +152,95 @@ export default function TeacherGallery() {
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingTeacher, setConfirmingTeacher] = useState<TeacherProfile | null>(null);
   const router=useRouter();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userid, setuserid]=useState<string>("");
+  const supabase = createClientComponentClient();
+  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
+  const params = useSearchParams();
+  const [isChecking, setIsChecking] = useState(true);
+  
+  // Extract parameters from URL
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+  const decryptData = (encryptedText: string): string => {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return ''; 
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+  const checkTeacherStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('teacher')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error checking teacher status:", error);
+        throw error;
+      }
+
+      if (data && data.teacher !== "unassigned") {
+        router.push(`/Student_UI/Student_Flow/Game_Map?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+      }
+    } catch (err) {
+      console.error("Error in checkAvatarStatus:", err);
+      setError(err instanceof Error ? err.message : 'Failed to check avatar status');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  useEffect(()=>{
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
+      setuserid(decryptedId);
+      checkTeacherStatus(decryptedId);
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
+    }
+  },[userid, isChecking])
+
+  const updateTeacherAvatar = async (TeacherName: string) => {
+    setIsUpdating(true);
+    setError(null);
+    
+    try {
+      console.log("Updating avatar for user:", userid);
+      console.log("New avatar name:", TeacherName);
+      
+      const { data, error: updateError } = await supabase
+        .from('students')
+        .update({ teacher: TeacherName })
+        .eq('id', userid)
+        .select();
+      
+      console.log("Update response:", data);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
+        throw updateError;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error("Error in updateStudentAvatar:", err);
+      setError(err instanceof Error ? err.message : 'Failed to update avatar');
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+};
+
 
   useEffect(()=>{ },[router])
 
@@ -158,9 +249,15 @@ export default function TeacherGallery() {
     setShowDialog(true);
   };
 
-  const handleConfirmSelection = () => {
-    setSelectedTeacher(confirmingTeacher);
-    setShowDialog(false);
+  const handleConfirmSelection = async () => {
+    if (!confirmingTeacher) return;
+    
+    const success = await updateTeacherAvatar(confirmingTeacher.name);
+    
+    if (success) {
+      setSelectedTeacher(confirmingTeacher);
+         setShowDialog(false);
+    }
   };
 
   return (
@@ -198,12 +295,13 @@ export default function TeacherGallery() {
             </div>
 
             <div className="flex justify-end px-4 py-3">
-              <Button 
-                className="h-10 min-w-[84px] max-w-[480px] bg-[#472424] font-bold tracking-tight"
-                onClick={()=>{router.push('/Student_UI/Student_Flow/Game_Map')}}
-              >
-                Next
-              </Button>
+            <Button 
+              className="h-10 min-w-[84px] max-w-[480px] bg-[#472424] font-bold tracking-tight"
+              onClick={() => router.push(`/Student_UI/Student_Flow/Game_Map?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+              disabled={!selectedTeacher || isUpdating}
+            >
+              {isUpdating ? 'Updating...' : 'Next'}
+            </Button>
             </div>
           </div>
         </div>
