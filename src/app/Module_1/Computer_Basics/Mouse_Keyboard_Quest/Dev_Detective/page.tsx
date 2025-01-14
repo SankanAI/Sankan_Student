@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback} from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense} from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -364,11 +364,13 @@ print(c)  # Result: ${result}`;
   // Validation check
   if (!principalId || !schoolId || !teacherId) {
     return (
+      <Suspense>
       <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
         <Alert variant="destructive">
           <AlertDescription>Missing required parameters</AlertDescription>
         </Alert>
       </div>
+      </Suspense>
     );
   }
 
