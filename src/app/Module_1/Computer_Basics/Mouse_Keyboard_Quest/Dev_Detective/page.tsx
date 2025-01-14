@@ -211,6 +211,12 @@ const MathDetective = () => {
         return;
       }
 
+      if (existingError && existingError.code !== 'PGRST116') {
+        // Handle unexpected errors
+        console.error('Error checking existing record:', existingError);
+        return;
+      }
+
       // Create new record if none exists
       const { data: newRecord, error: insertError } = await supabase
         .from('dev_detective')
@@ -550,8 +556,7 @@ print(c)  # Result: ${result}`;
             <DialogHeader>
               <DialogTitle>Congratulations! 🎉</DialogTitle>
               <AlertDescription>
-                You've successfully completed all steps and generated the Python code!
-                Feel free to try different numbers and operations.
+                {"You've successfully completed all steps and generated the Python code! Feel free to try different numbers and operations."}
               </AlertDescription>
             </DialogHeader>
             <Button 
