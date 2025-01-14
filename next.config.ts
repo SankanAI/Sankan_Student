@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",  // Keep this for GitHub Pages
+  reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
   },

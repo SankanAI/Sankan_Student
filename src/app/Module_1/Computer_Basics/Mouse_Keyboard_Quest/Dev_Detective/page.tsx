@@ -17,6 +17,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useSearchParams, useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import Cookies from "js-cookie";
+
+type DevDetectiveRecord = {
+  id: string;  // UUID
+  mouse_keyboard_quest_id: string;  // UUID
+  student_id: string;  // UUID
+  
+  // Numbers and Operation
+  first_number: number | null;
+  second_number: number | null;
+  operation: '+' | '-' | '*' | '/' | null;
+  
+  // Results
+  result: number | null;
+  generated_code: string | null;
+  
+  // Overall status
+  completed: boolean;
+  
+  // Timestamps
+  started_at: string;    // TIMESTAMP WITH TIME ZONE as ISO string
+  completed_at: string | null;  // TIMESTAMP WITH TIME ZONE as ISO string
+};
 
 type Operation = '+' | '-' | '*' | '/';
 
@@ -30,13 +55,197 @@ const MathDetective = () => {
   const [generatedCode, setGeneratedCode] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
+  const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
+  const [isDevDetectiveCompleted, setIsDevDetectiveCompleted] = useState(false);
+  
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const secretKey = process.env.NEXT_PUBLIC_SECRET_KEY;
+  const supabase = createClientComponentClient();
+  const [userId, setUserId] = useState('');
+  const router = useRouter();
+  const params = useSearchParams();
 
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+  // Decryption function
+  const decryptData = (encryptedText: string): string => {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+  // Initialize progress record
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+      // Verify computer_basics completion
+      const { data: computerBasicsData, error: computerBasicsError } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+
+      if (computerBasicsError || !computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Verify mouse_keyboard_quest existence
+      const { data: questData, error: questError } = await supabase
+        .from('mouse_keyboard_quest')
+        .select('id')
+        .eq('computer_basics_id', computerBasicsData.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (questError || !questData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Verify keyboard completion
+      const { data: keyboardData, error: keyboardError } = await supabase
+        .from('keyboard')
+        .select('completed')
+        .eq('mouse_keyboard_quest_id', questData.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (keyboardError || !keyboardData?.completed) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Check for existing dev_detective record
+      const { data: existingRecord, error: existingError } = await supabase
+        .from('dev_detective')
+        .select('*')
+        .eq('mouse_keyboard_quest_id', questData.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (existingRecord) {
+        setProgressRecord(existingRecord);
+        return;
+      }
+
+      if (existingError && existingError.code !== 'PGRST116') {
+        console.log('Error checking existing record:', existingError);
+        return;
+      }
+
+      // Create new record if none exists
+      const { data: newRecord, error: insertError } = await supabase
+        .from('dev_detective')
+        .insert([{
+          mouse_keyboard_quest_id: questData.id,
+          student_id: studentId,
+          first_number: null,
+          second_number: null,
+          operation: null,
+          result: null,
+          generated_code: null,
+          completed: false,
+          started_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.log('Error creating new record:', insertError);
+        return;
+      }
+
+      if (newRecord) {
+        setProgressRecord(newRecord);
+      }
+    } catch (error) {
+      console.log('Error in initializeProgressRecord:', error);
+    }
+  };
+
+  // Update progress
+  const updateProgress = async () => {
+    if (!progressRecord || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('dev_detective')
+        .update({
+          first_number: parseInt(firstNumber),
+          second_number: parseInt(secondNumber),
+          operation: operation,
+          result: result,
+          generated_code: generatedCode,
+          completed: true,
+          completed_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        })
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      // Update mouse_keyboard_quest completion
+      const { error: questError } = await supabase
+        .from('mouse_keyboard_quest')
+        .update({
+          completed_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        })
+        .eq('id', progressRecord.mouse_keyboard_quest_id);
+
+      if (questError) throw questError;
+
+      setIsDevDetectiveCompleted(true);
+      router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    } catch (error) {
+      console.log('Error updating progress:', error);
+    }
+  };
+
+  // Effect for initialization and completion check
   useEffect(() => {
-    // Initialize speech synthesis
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: devDetectiveData, error } = await supabase
+          .from('dev_detective')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (devDetectiveData?.completed) {
+          setIsDevDetectiveCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+
+    if (Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      setUserId(decryptedId);
+      checkCompletion(decryptedId);
+      if (!isDevDetectiveCompleted) {
+        initializeProgressRecord(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    }
+  }, [userId]);
+
+  // Speech recognition initialization
+  useEffect(() => {
     speechRef.current = new SpeechSynthesisUtterance();
     
-    // Initialize speech recognition
     if (window.webkitSpeechRecognition) {
       const recognition = new window.webkitSpeechRecognition();
       recognition.continuous = false;
@@ -55,15 +264,16 @@ const MathDetective = () => {
     };
   }, []);
 
-  // Rest of the component remains the same
+  // Speech synthesis function
   const speak = (text: string) => {
     if (speechRef.current && window.speechSynthesis) {
-      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
       speechRef.current.text = text;
       window.speechSynthesis.speak(speechRef.current);
     }
   };
 
+  // Voice command processing
   const processVoiceCommand = (command: string) => {
     const numbers = command.match(/\d+/g);
     if (numbers && numbers.length >= 2) {
@@ -96,12 +306,6 @@ const MathDetective = () => {
     }
   };
 
-  const playSound = (soundFile: string) => {
-    const audio = new Audio(soundFile);
-    audio.play();
-  };
-  
-
   const calculateResult = () => {
     const a = parseFloat(firstNumber);
     const b = parseFloat(secondNumber);
@@ -121,28 +325,24 @@ const MathDetective = () => {
     setCurrentStep(4);
   };
 
-  const generatePythonCode = () => {
+  const generatePythonCode = async () => {
     const code = `a = ${firstNumber}
-      b = ${secondNumber}
-      c = a ${operation} b
-      print(c)  # Result: ${result}`;
+b = ${secondNumber}
+c = a ${operation} b
+print(c)  # Result: ${result}`;
 
     setGeneratedCode(code);
     speak('Python code has been generated');
-    playSound('https://raw.githubusercontent.com/its-shashankY/filterImage/refs/heads/master/game-bonus-144751 (1).mp3')
     setShowSuccess(true);
+    await updateProgress();
   };
 
   const canProceedToNext = () => {
     switch (currentStep) {
-      case 1:
-        return firstNumber !== '' && secondNumber !== '';
-      case 2:
-        return operation !== null;
-      case 3:
-        return result !== null;
-      default:
-        return false;
+      case 1: return firstNumber !== '' && secondNumber !== '';
+      case 2: return operation !== null;
+      case 3: return result !== null;
+      default: return false;
     }
   };
 
@@ -152,6 +352,16 @@ const MathDetective = () => {
       speak(`Moving to step ${currentStep + 1}`);
     }
   };
+
+  if (!principalId || !schoolId || !teacherId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
+        <Alert variant="destructive">
+          <AlertDescription>Missing required parameters</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   // JSX remains the same
   return (

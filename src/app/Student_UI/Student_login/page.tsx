@@ -8,6 +8,8 @@ import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
+
+
 export default function Home() {
 
   const router = useRouter();

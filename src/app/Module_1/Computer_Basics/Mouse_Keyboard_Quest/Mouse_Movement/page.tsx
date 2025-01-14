@@ -144,7 +144,6 @@ export default function EnhancedEmojiTrainer() {
         const { error: questError } = await supabase
           .from('mouse_keyboard_quest')
           .update({
-            completed: true,
             completed_at: new Date().toISOString(),
             last_activity: new Date().toISOString()
           })
@@ -153,7 +152,7 @@ export default function EnhancedEmojiTrainer() {
         if (questError) throw questError;
       }
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.log('Error updating progress:', error);
     }
   };
 
@@ -241,7 +240,7 @@ export default function EnhancedEmojiTrainer() {
         }
       }
     } catch (error) {
-      console.error('Error initializing progress record:', error);
+      console.log('Error initializing progress record:', error);
       // Handle error appropriately - maybe show an error message to the user
     }
   };
@@ -259,10 +258,10 @@ export default function EnhancedEmojiTrainer() {
         
         if (mouseMovementData?.completed) {
           setIsMouseMovementCompleted(true);
-          router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard');
+          router.push(`Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         }
       } catch (error) {
-        console.error('Error checking completion status:', error);
+        console.log('Error checking completion status:', error);
       }
     };
 

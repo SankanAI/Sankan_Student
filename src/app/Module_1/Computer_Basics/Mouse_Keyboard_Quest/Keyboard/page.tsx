@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import Cookies from "js-cookie";
 
 type GameLevel = {
   id: number;
@@ -17,6 +19,7 @@ type GameLevel = {
   requiredScore: number;
   codingTermsDescriptions: { [key: string]: string };
 };
+
 
 const LEVELS: GameLevel[] = [
   {
@@ -32,7 +35,7 @@ const LEVELS: GameLevel[] = [
       1:'1',2: '2',3: '3',4: '4', 5: '5',6: '6',7: '7',8: '8',9: '9',0: '0'
     },
     timeLimit: 20,
-    requiredScore: 15
+    requiredScore: 12
   },
   {
     id: 2,
@@ -99,8 +102,8 @@ const LEVELS: GameLevel[] = [
       "?": "Used in a shortcut for 'if' and 'else' (conditional operator).",
       ":": "Part of the shortcut for 'if' and 'else' (used with '?')."
     },
-    timeLimit: 60,
-    requiredScore: 12
+    timeLimit: 180,
+    requiredScore: 30
   },
   {
     id: 3,
@@ -160,10 +163,33 @@ const LEVELS: GameLevel[] = [
       '-l', '-h', '-i', '--all', '--force', '--recursive', 
       '--interactive', '--dry-run', '--quiet'
     ],
-    timeLimit: 100,
-    requiredScore: 10
+    timeLimit: 240,
+    requiredScore: 35
   }
 ];
+
+type KeyboardRecord = {
+  keyboard_id: string;
+  mouse_keyboard_quest_id: string;
+  student_id: string;
+  completed: boolean;
+  
+  // Level 1 tracking
+  level1_score: number | null;
+  level1_time: number | null;  // INTERVAL will be returned as string
+  
+  // Level 2 tracking
+  level2_score: number | null;
+  level2_time: number | null;  // INTERVAL will be returned as string
+  
+  // Level 3 tracking
+  level3_score: number | null;
+  level3_time: number | null;  // INTERVAL will be returned as string
+  
+  // Timestamps
+  created_at: string;   // TIMESTAMP WITH TIME ZONE returned as ISO string
+  updated_at: string;   // TIMESTAMP WITH TIME ZONE returned as ISO string
+};
 
 export default function TypingTriumph() {
   const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
@@ -171,21 +197,163 @@ export default function TypingTriumph() {
   const [userInput, setUserInput] = useState('');
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
+  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [accuracy, setAccuracy] = useState(100);
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [correctAttempts, setCorrectAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClientComponentClient();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [KeyComplete, setkeyComplete]=useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
+  const [isKeyboardMovementCompleted, setIsKeyboardMovementCompleted] = useState(false);
+  const [progressRecord, setProgressRecord] = useState<KeyboardRecord | null>(null);
   const router=useRouter();
+  const params = useSearchParams();
+  
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+   // Add new state for level completion times
+   const [level1Time, setLevel1Time] = useState<number>(0);
+   const [level2Time, setLevel2Time] = useState<number>(0);
+   const [level3Time, setLevel3Time] = useState<number>(0);
+   
+   // Add state for level scores
+   const [level1Score, setLevel1Score] = useState<number>(0);
+   const [level2Score, setLevel2Score] = useState<number>(0);
+   const [level3Score, setLevel3Score] = useState<number>(0);
 
   const getNewWord = () => {
     const randomIndex = Math.floor(Math.random() * currentLevel.words.length);
     return currentLevel.words[randomIndex];
   };
+
+  const decryptData = (encryptedText: string): string => {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return ''; 
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+   const initializeProgressRecord = async (studentId: string) => {
+    try {
+      // Check for existing computer_basics record
+      let { data: computerBasicsData, error: computerBasicsError } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+  
+      if (computerBasicsError || !computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+  
+      // Check for existing mouse_keyboard_quest record
+      let { data: questData, error: questError } = await supabase
+        .from('mouse_keyboard_quest')
+        .select('id')
+        .eq('computer_basics_id', computerBasicsData.id)
+        .eq('student_id', studentId)
+        .single();
+  
+      if (questError || !questData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+  
+      // Check for existing keyboard record
+      const { data: existingRecord, error: existingError } = await supabase
+        .from('keyboard')
+        .select('*')
+        .eq('mouse_keyboard_quest_id', questData.id)
+        .eq('student_id', studentId)
+        .single();
+  
+      if (existingError && existingError.code !== 'PGRST116') {
+        // Handle unexpected errors
+        console.error('Error checking existing record:', existingError);
+        return;
+      }
+  
+      if (existingRecord) {
+        // If record exists, just update the state
+        setProgressRecord(existingRecord);
+      } else {
+        // Only create new record if one doesn't exist
+        const { data: newRecord, error: insertError } = await supabase
+          .from('keyboard')
+          .insert([{
+            mouse_keyboard_quest_id: questData.id,
+            student_id: studentId,
+            level1_score: null,
+            level1_time: null,
+            level2_score: null,
+            level2_time: null,
+            level3_score: null,
+            level3_time: null,
+            completed: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+  
+        if (insertError) {
+          console.error('Error creating new record:', insertError);
+          return;
+        }
+  
+        if (newRecord) {
+          setProgressRecord(newRecord);
+        }
+      }
+    } catch (error) {
+      console.error('Error in initializeProgressRecord:', error);
+      // Handle error appropriately - maybe show an error message to the user
+    }
+  };
+
+  useEffect(()=>{
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: mouseMovementData, error } = await supabase
+          .from('keyboard')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (mouseMovementData?.completed) {
+          setIsKeyboardMovementCompleted(true);
+          router.push(`Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
+      setUserId(decryptedId);
+      checkCompletion(decryptedId);
+      if (!isKeyboardMovementCompleted) {
+        initializeProgressRecord(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
+    }
+  },[userId, level1Score,level2Score,level3Score, level3Time])
 
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
@@ -206,6 +374,49 @@ export default function TypingTriumph() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isPlaying, KeyComplete, timeLeft]);
+
+
+  const finalSubmit=async(timing:number, scored:number)=>{
+    if (!progressRecord || !userId) return;
+
+    const updates: Partial<KeyboardRecord> = {
+      level1_score: level1Score ,
+      level1_time: level1Time , // INTERVAL will be returned as string
+      level2_score: level2Score,
+      level2_time: level2Time , // INTERVAL will be returned as string
+      level3_score: scored ,
+      level3_time: timing ,  // INTERVAL will be returned as string
+    };
+
+    setLevel3Score(scored);
+    setLevel3Time(timing);
+    const allCompleted=(level1Score>11 && level2Score>29 && scored> 34)?true:false;
+    if(allCompleted){updates.completed=allCompleted;}
+
+    try {
+      const { error } = await supabase
+        .from('keyboard')
+        .update(updates)
+        .eq('keyboard_id', progressRecord.keyboard_id);
+
+      if (error) throw error;
+
+      if (allCompleted) {
+        // Update mouse_keyboard_quest completion if needed
+        const { error: questError } = await supabase
+          .from('mouse_keyboard_quest')
+          .update({
+            completed_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          })
+          .eq('id', progressRecord.mouse_keyboard_quest_id);
+
+        if (questError) throw questError;
+      }
+    } catch (error) {
+      console.log('Error updating progress:', error);
+  }
+}
 
   const startGame = () => {
     setIsPlaying(true);
@@ -239,11 +450,15 @@ export default function TypingTriumph() {
   const handleNextLevel = () => {
     const nextLevelIndex = LEVELS.findIndex(level => level.id === currentLevel.id) + 1;
     if (nextLevelIndex < LEVELS.length) {
+      if(currentLevel.id==1){setLevel1Time(currentLevel.timeLimit); setLevel1Score(score)}
+      else if(currentLevel.id==2){setLevel2Time(currentLevel.timeLimit); setLevel2Score(score)}
       setCurrentLevel(LEVELS[nextLevelIndex]);
       setGameCompleted(false);
     }
     else{ 
+      console.log("Completed")
       setkeyComplete(true)
+      setGameCompleted(true);
      }
   };
 
@@ -321,18 +536,16 @@ export default function TypingTriumph() {
                   <Button onClick={startGame} className="flex-1">
                     Try Again
                   </Button>
-                  {isLevelComplete && currentLevel.id < LEVELS.length && (
+                  {(isLevelComplete && currentLevel.id < LEVELS.length && !isKeyboardMovementCompleted) && (
                     <Button onClick={handleNextLevel} className="flex-1">
                       Next Level
                     </Button>
                   )}
-                  {isLevelComplete && currentLevel.id === LEVELS.length && (
-                    <Button onClick={() => setShowCongrats(true)} className="flex-1">
-                     Dev Detective
+                  {(currentLevel.id === LEVELS.length ) && (
+                    <Button onClick={()=>{finalSubmit(currentLevel.timeLimit, score); setShowCongrats(true)}} className="flex-1">
+                       Dev Detective
                     </Button>
                   )}
-              
-                    
                 </div>
               </AlertDescription>
             </Alert>
