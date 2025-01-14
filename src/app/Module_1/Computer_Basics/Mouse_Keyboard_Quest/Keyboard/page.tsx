@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -246,7 +246,7 @@ export default function TypingTriumph() {
    const initializeProgressRecord = async (studentId: string) => {
     try {
       // Check for existing computer_basics record
-      let { data: computerBasicsData, error: computerBasicsError } = await supabase
+      const { data: computerBasicsData, error: computerBasicsError } = await supabase
         .from('computer_basics')
         .select('id')
         .eq('student_id', studentId)
@@ -258,7 +258,7 @@ export default function TypingTriumph() {
       }
   
       // Check for existing mouse_keyboard_quest record
-      let { data: questData, error: questError } = await supabase
+      const { data: questData, error: questError } = await supabase
         .from('mouse_keyboard_quest')
         .select('id')
         .eq('computer_basics_id', computerBasicsData.id)
@@ -353,7 +353,7 @@ export default function TypingTriumph() {
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
     }
-  },[userId, level1Score,level2Score,level3Score, level3Time])
+  },[userId, level1Score,level2Score,level3Score, level3Time, decryptData, initializeProgressRecord,isKeyboardMovementCompleted, principalId, teacherId, supabase, schoolId])
 
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
@@ -418,7 +418,7 @@ export default function TypingTriumph() {
   }
 }
 
-  const startGame = () => {
+  const startGame = useCallback(() => {
     setIsPlaying(true);
     setGameCompleted(false);
     setScore(0);
@@ -429,7 +429,7 @@ export default function TypingTriumph() {
     setCorrectAttempts(0);
     setAccuracy(100);
     if (inputRef.current) inputRef.current.focus();
-  };
+  },[isPlaying, gameCompleted, score, timeLeft, currentWord, userInput, totalAttempts, correctAttempts, accuracy]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isPlaying) return;

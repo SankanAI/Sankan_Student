@@ -464,7 +464,7 @@ export default function EnhancedEmojiTrainer() {
     animate();
   }, [isPlaying, viewportSize]);
 
-  const startGame = () => {
+  const startGame = useCallback(() => {
     setIsPlaying(true);
     setGameCompleted(false);
     setEventStats({
@@ -479,7 +479,7 @@ export default function EnhancedEmojiTrainer() {
       .fill(null)
       .map(() => createEmoji());
     setEmojis(initialEmojis);
-  };
+  },[eventStats, timeLeft, showHint, emojis]);
 
   return (
     <div ref={containerRef} className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-">

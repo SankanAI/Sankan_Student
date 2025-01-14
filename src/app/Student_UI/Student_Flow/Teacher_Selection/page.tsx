@@ -208,7 +208,7 @@ export default function TeacherGallery() {
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
     }
-  },[userid, isChecking])
+  },[userid, isChecking, error])
 
   const updateTeacherAvatar = async (TeacherName: string) => {
     setIsUpdating(true);

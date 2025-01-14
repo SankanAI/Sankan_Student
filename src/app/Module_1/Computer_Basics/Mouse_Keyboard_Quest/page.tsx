@@ -14,12 +14,6 @@ type CompletionStatus = {
   loading: boolean;
 };
 
-interface ModuleStatus {
-  mouse_movement: CompletionStatus;
-  keyboard: CompletionStatus;
-  dev_detective: CompletionStatus;
-}
-
 interface QueryParams {
   principalId: string | null;
   schoolId: string | null;

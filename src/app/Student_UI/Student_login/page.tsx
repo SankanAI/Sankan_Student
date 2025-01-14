@@ -97,6 +97,7 @@ export default function Home() {
        setError("Some Error")
     } finally {
       setLoading(false);
+      console.log(loading)
     }
   };
 

@@ -1,12 +1,45 @@
 // First, add type declarations for the Web Speech API
 "use client";
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal?: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  start(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
 declare global {
   interface Window {
-    webkitSpeechRecognition: any;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
   }
 }
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback} from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -54,7 +87,7 @@ const MathDetective = () => {
   const [result, setResult] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
   const [isDevDetectiveCompleted, setIsDevDetectiveCompleted] = useState(false);
   
@@ -218,7 +251,7 @@ const MathDetective = () => {
           .select('completed')
           .eq('student_id', decryptedId)
           .single();
-
+  
         if (error) throw error;
         
         if (devDetectiveData?.completed) {
@@ -226,46 +259,38 @@ const MathDetective = () => {
           router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         }
       } catch (error) {
-        console.log('Error checking completion status:', error);
+        console.error('Error checking completion status:', error);
       }
     };
-
-    if (Cookies.get('userId')) {
-      const decryptedId = decryptData(Cookies.get('userId')!);
-      setUserId(decryptedId);
-      checkCompletion(decryptedId);
-      if (!isDevDetectiveCompleted) {
-        initializeProgressRecord(decryptedId);
-      }
-    } else {
-      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-    }
-  }, [userId]);
-
-  // Speech recognition initialization
-  useEffect(() => {
-    speechRef.current = new SpeechSynthesisUtterance();
-    
-    if (window.webkitSpeechRecognition) {
-      const recognition = new window.webkitSpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.onresult = (event: any) => {
-        const result = event.results[0][0].transcript;
-        processVoiceCommand(result);
-      };
-      setRecognition(recognition);
-    }
-
-    return () => {
-      if (speechRef.current && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+  
+    const initializeUser = () => {
+      const userIdCookie = Cookies.get('userId');
+      if (userIdCookie) {
+        const decryptedId = decryptData(userIdCookie);
+        setUserId(decryptedId);
+        checkCompletion(decryptedId);
+        if (!isDevDetectiveCompleted) {
+          initializeProgressRecord(decryptedId);
+        }
+      } else {
+        router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
       }
     };
-  }, []);
+  
+    initializeUser();
+  }, [
+    decryptData,
+    initializeProgressRecord,
+    isDevDetectiveCompleted,
+    principalId,
+    router,
+    schoolId,
+    teacherId,
+    supabase
+  ]);
 
-  // Speech synthesis function
-  const speak = (text: string) => {
+   // Speech synthesis function
+   const speak = (text: string) => {
     if (speechRef.current && window.speechSynthesis) {
       window.speechSynthesis.cancel();
       speechRef.current.text = text;
@@ -273,8 +298,8 @@ const MathDetective = () => {
     }
   };
 
-  // Voice command processing
-  const processVoiceCommand = (command: string) => {
+
+  const processVoiceCommand = useCallback((command: string) => {
     const numbers = command.match(/\d+/g);
     if (numbers && numbers.length >= 2) {
       setFirstNumber(numbers[0]);
@@ -297,8 +322,33 @@ const MathDetective = () => {
       setOperation('/');
       speak('Setting operation to division');
     }
-  };
+  }, [speak]);
 
+  // Speech recognition initialization
+  useEffect(() => {
+    speechRef.current = new SpeechSynthesisUtterance();
+    
+    if (window.webkitSpeechRecognition) {
+      const newRecognition = new window.webkitSpeechRecognition();
+      newRecognition.continuous = false;
+      newRecognition.interimResults = false;
+      
+      newRecognition.onresult = (event: SpeechRecognitionEvent) => {
+        const result = event.results[0][0].transcript;
+        processVoiceCommand(result);
+      };
+      
+      setRecognition(newRecognition);
+    }
+  
+    return () => {
+      if (speechRef.current && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [processVoiceCommand]);
+
+ 
   const startListening = () => {
     if (recognition) {
       recognition.start();
