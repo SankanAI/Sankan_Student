@@ -1,5 +1,21 @@
-// First, add type declarations for the Web Speech API
 "use client";
+
+import React, { useState, useEffect, useRef, useCallback} from 'react';
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Calculator, Code, Volume2, ArrowRight } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useSearchParams, useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Cookies from "js-cookie";
+
+// Web Speech API Types
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
 }
@@ -29,56 +45,40 @@ interface SpeechRecognition extends EventTarget {
   start(): void;
 }
 
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognition;
-}
-
 declare global {
   interface Window {
-    webkitSpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: new () => SpeechRecognition;
   }
 }
 
-import React, { useState, useEffect, useRef, useCallback} from 'react';
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Calculator, Code, Volume2, ArrowRight } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useSearchParams, useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import Cookies from "js-cookie";
-
+// Type Definitions
 type DevDetectiveRecord = {
-  id: string;  // UUID
-  mouse_keyboard_quest_id: string;  // UUID
-  student_id: string;  // UUID
-  
-  // Numbers and Operation
+  id: string;
+  mouse_keyboard_quest_id: string;
+  student_id: string;
   first_number: number | null;
   second_number: number | null;
   operation: '+' | '-' | '*' | '/' | null;
-  
-  // Results
   result: number | null;
   generated_code: string | null;
-  
-  // Overall status
   completed: boolean;
-  
-  // Timestamps
-  started_at: string;    // TIMESTAMP WITH TIME ZONE as ISO string
-  completed_at: string | null;  // TIMESTAMP WITH TIME ZONE as ISO string
+  started_at: string;
+  completed_at: string | null;
 };
 
 type Operation = '+' | '-' | '*' | '/';
 
 const MathDetective = () => {
+  const router = useRouter();
+  const params = useSearchParams();
+  const supabase = createClientComponentClient();
+  
+  // Route parameters
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+  // State management
   const [showInstructions, setShowInstructions] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [firstNumber, setFirstNumber] = useState('');
@@ -87,33 +87,90 @@ const MathDetective = () => {
   const [result, setResult] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [userId, setUserId] = useState('');
   const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
   const [isDevDetectiveCompleted, setIsDevDetectiveCompleted] = useState(false);
-  
+
+  // Refs
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const secretKey = process.env.NEXT_PUBLIC_SECRET_KEY;
-  const supabase = createClientComponentClient();
-  const [userId, setUserId] = useState('');
-  const router = useRouter();
-  const params = useSearchParams();
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const principalId = params.get('principalId');
-  const schoolId = params.get('schoolId');
-  const teacherId = params.get('teacherId');
-
-  // Decryption function
-  const decryptData = (encryptedText: string): string => {
+  // Utility functions
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
     const [ivBase64, encryptedBase64] = encryptedText.split('.');
     if (!ivBase64 || !encryptedBase64) return '';
+    
     const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(secretKey).slice(0, 16);
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
     const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
     const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
     return new TextDecoder().decode(decryptedBytes);
-  };
+  }, []);
 
-  // Initialize progress record
+  // Speech synthesis
+  const speak = useCallback((text: string) => {
+    if (speechRef.current && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      speechRef.current.text = text;
+      window.speechSynthesis.speak(speechRef.current);
+    }
+  }, []);
+
+  // Voice command processing
+  const processVoiceCommand = useCallback((command: string) => {
+    const numbers = command.match(/\d+/g);
+    if (numbers && numbers.length >= 2) {
+      setFirstNumber(numbers[0]);
+      setSecondNumber(numbers[1]);
+      speak(`Setting numbers to ${numbers[0]} and ${numbers[1]}`);
+    }
+    if (command.includes('plus') || command.includes('add')) {
+      setOperation('+');
+      speak('Setting operation to addition');
+    }
+    if (command.includes('minus') || command.includes('subtract')) {
+      setOperation('-');
+      speak('Setting operation to subtraction');
+    }
+    if (command.includes('multiply') || command.includes('times')) {
+      setOperation('*');
+      speak('Setting operation to multiplication');
+    }
+    if (command.includes('divide')) {
+      setOperation('/');
+      speak('Setting operation to division');
+    }
+  }, [speak]);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      speechRef.current = new SpeechSynthesisUtterance();
+      
+      if (window.webkitSpeechRecognition) {
+        const recognition = new window.webkitSpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+          const result = event.results[0][0].transcript;
+          processVoiceCommand(result);
+        };
+        
+        recognitionRef.current = recognition;
+      }
+    }
+
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [processVoiceCommand]);
+
+  // Database operations
   const initializeProgressRecord = async (studentId: string) => {
     try {
       // Verify computer_basics completion
@@ -141,19 +198,6 @@ const MathDetective = () => {
         return;
       }
 
-      // Verify keyboard completion
-      const { data: keyboardData, error: keyboardError } = await supabase
-        .from('keyboard')
-        .select('completed')
-        .eq('mouse_keyboard_quest_id', questData.id)
-        .eq('student_id', studentId)
-        .single();
-
-      if (keyboardError || !keyboardData?.completed) {
-        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        return;
-      }
-
       // Check for existing dev_detective record
       const { data: existingRecord, error: existingError } = await supabase
         .from('dev_detective')
@@ -164,11 +208,6 @@ const MathDetective = () => {
 
       if (existingRecord) {
         setProgressRecord(existingRecord);
-        return;
-      }
-
-      if (existingError && existingError.code !== 'PGRST116') {
-        console.log('Error checking existing record:', existingError);
         return;
       }
 
@@ -191,7 +230,7 @@ const MathDetective = () => {
         .single();
 
       if (insertError) {
-        console.log('Error creating new record:', insertError);
+        console.error('Error creating new record:', insertError);
         return;
       }
 
@@ -199,11 +238,10 @@ const MathDetective = () => {
         setProgressRecord(newRecord);
       }
     } catch (error) {
-      console.log('Error in initializeProgressRecord:', error);
+      console.error('Error in initializeProgressRecord:', error);
     }
   };
 
-  // Update progress
   const updateProgress = async () => {
     if (!progressRecord || !userId) return;
 
@@ -238,37 +276,17 @@ const MathDetective = () => {
       setIsDevDetectiveCompleted(true);
       router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     } catch (error) {
-      console.log('Error updating progress:', error);
+      console.error('Error updating progress:', error);
     }
   };
 
-  // Effect for initialization and completion check
+  // Initialize user and check completion
   useEffect(() => {
-    const checkCompletion = async (decryptedId: string) => {
-      try {
-        const { data: devDetectiveData, error } = await supabase
-          .from('dev_detective')
-          .select('completed')
-          .eq('student_id', decryptedId)
-          .single();
-  
-        if (error) throw error;
-        
-        if (devDetectiveData?.completed) {
-          setIsDevDetectiveCompleted(true);
-          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        }
-      } catch (error) {
-        console.error('Error checking completion status:', error);
-      }
-    };
-  
     const initializeUser = () => {
       const userIdCookie = Cookies.get('userId');
       if (userIdCookie) {
         const decryptedId = decryptData(userIdCookie);
         setUserId(decryptedId);
-        checkCompletion(decryptedId);
         if (!isDevDetectiveCompleted) {
           initializeProgressRecord(decryptedId);
         }
@@ -276,82 +294,16 @@ const MathDetective = () => {
         router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
       }
     };
-  
-    initializeUser();
-  }, [
-    decryptData,
-    initializeProgressRecord,
-    isDevDetectiveCompleted,
-    principalId,
-    router,
-    schoolId,
-    teacherId,
-    supabase
-  ]);
 
-   // Speech synthesis function
-   const speak = (text: string) => {
-    if (speechRef.current && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      speechRef.current.text = text;
-      window.speechSynthesis.speak(speechRef.current);
+    if (principalId && schoolId && teacherId) {
+      initializeUser();
     }
-  };
+  }, [principalId, schoolId, teacherId, isDevDetectiveCompleted, router, decryptData]);
 
-
-  const processVoiceCommand = useCallback((command: string) => {
-    const numbers = command.match(/\d+/g);
-    if (numbers && numbers.length >= 2) {
-      setFirstNumber(numbers[0]);
-      setSecondNumber(numbers[1]);
-      speak(`Setting numbers to ${numbers[0]} and ${numbers[1]}`);
-    }
-    if (command.includes('plus') || command.includes('add')) {
-      setOperation('+');
-      speak('Setting operation to addition');
-    }
-    if (command.includes('minus') || command.includes('subtract')) {
-      setOperation('-');
-      speak('Setting operation to subtraction');
-    }
-    if (command.includes('multiply') || command.includes('times')) {
-      setOperation('*');
-      speak('Setting operation to multiplication');
-    }
-    if (command.includes('divide')) {
-      setOperation('/');
-      speak('Setting operation to division');
-    }
-  }, [speak]);
-
-  // Speech recognition initialization
-  useEffect(() => {
-    speechRef.current = new SpeechSynthesisUtterance();
-    
-    if (window.webkitSpeechRecognition) {
-      const newRecognition = new window.webkitSpeechRecognition();
-      newRecognition.continuous = false;
-      newRecognition.interimResults = false;
-      
-      newRecognition.onresult = (event: SpeechRecognitionEvent) => {
-        const result = event.results[0][0].transcript;
-        processVoiceCommand(result);
-      };
-      
-      setRecognition(newRecognition);
-    }
-  
-    return () => {
-      if (speechRef.current && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [processVoiceCommand]);
-
- 
+  // Component functions
   const startListening = () => {
-    if (recognition) {
-      recognition.start();
+    if (recognitionRef.current) {
+      recognitionRef.current.start();
       speak('Listening for your command');
     }
   };
@@ -403,6 +355,7 @@ print(c)  # Result: ${result}`;
     }
   };
 
+  // Validation check
   if (!principalId || !schoolId || !teacherId) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
@@ -413,7 +366,7 @@ print(c)  # Result: ${result}`;
     );
   }
 
-  // JSX remains the same
+  // Main JSX
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
       <div className="w-2/4 ml-[25%] mx-auto space-y-4">
@@ -597,10 +550,13 @@ print(c)  # Result: ${result}`;
             <DialogHeader>
               <DialogTitle>Congratulations! 🎉</DialogTitle>
               <AlertDescription>
-                {"You've successfully completed all steps and generated the Python code! \nFeel free to try different numbers and operations."}
+                You've successfully completed all steps and generated the Python code!
+                Feel free to try different numbers and operations.
               </AlertDescription>
             </DialogHeader>
-            <Button>
+            <Button 
+              onClick={() => router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+            >
               Next Level
             </Button>
           </DialogContent>
