@@ -9,7 +9,7 @@ import {
 
 export default function AppAppBar(){
     return <>
-     <header className="flex items-center justify-between border-b border-[#472424] px-10 py-2">
+     <header className="flex items-center justify-between shadow-lg px-10 py-3">
         <div className="flex items-center gap-4 text-black">
             <div className="h-4 w-4">
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -25,7 +25,7 @@ export default function AppAppBar(){
                 />
             </svg>
             </div>
-            <h2 className="text-lg font-bold leading-tight tracking-tight text-black">
+            <h2 className="text-xl leading-tight tracking-tight text-black">
             Sankan Academy
             </h2>
         </div>

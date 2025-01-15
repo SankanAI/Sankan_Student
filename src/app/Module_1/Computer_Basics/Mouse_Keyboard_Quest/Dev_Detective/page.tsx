@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, Suspense} from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -89,7 +89,7 @@ const MathDetectiveContent = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [userId, setUserId] = useState('');
   const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
-  const [isDevDetectiveCompleted, setIsDevDetectiveCompleted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Refs
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -170,14 +170,26 @@ const MathDetectiveContent = () => {
     };
   }, [processVoiceCommand]);
 
-  // Database operations
-  const initializeProgressRecord = async (studentId: string) => {
+  const initializeUser =async (decryptedId: string) => {
     try {
-      // Verify computer_basics completion
+      // First, check if there's an existing dev_detective record that's completed
+      const { data: existingComplete, error: completeError } = await supabase
+        .from('dev_detective')
+        .select('completed')
+        .eq('student_id', decryptedId)
+        .eq('completed', true)
+        .single();
+
+      if (existingComplete) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Check prerequisites
       const { data: computerBasicsData, error: computerBasicsError } = await supabase
         .from('computer_basics')
         .select('id')
-        .eq('student_id', studentId)
+        .eq('student_id', decryptedId)
         .single();
 
       if (computerBasicsError || !computerBasicsData) {
@@ -185,12 +197,11 @@ const MathDetectiveContent = () => {
         return;
       }
 
-      // Verify mouse_keyboard_quest existence
       const { data: questData, error: questError } = await supabase
         .from('mouse_keyboard_quest')
         .select('id')
         .eq('computer_basics_id', computerBasicsData.id)
-        .eq('student_id', studentId)
+        .eq('student_id', decryptedId)
         .single();
 
       if (questError || !questData) {
@@ -198,12 +209,12 @@ const MathDetectiveContent = () => {
         return;
       }
 
-      // Check for existing dev_detective record
+      // Check for existing incomplete record
       const { data: existingRecord, error: existingError } = await supabase
         .from('dev_detective')
         .select('*')
         .eq('mouse_keyboard_quest_id', questData.id)
-        .eq('student_id', studentId)
+        .eq('student_id', decryptedId)
         .single();
 
       if (existingRecord) {
@@ -211,42 +222,51 @@ const MathDetectiveContent = () => {
         return;
       }
 
-      if (existingError && existingError.code !== 'PGRST116') {
-        // Handle unexpected errors
-        console.error('Error checking existing record:', existingError);
-        return;
-      }
+      // Only create new record if no record exists
+      if (existingError && existingError.code === 'PGRST116') {
+        const { data: newRecord, error: insertError } = await supabase
+          .from('dev_detective')
+          .insert([{
+            mouse_keyboard_quest_id: questData.id,
+            student_id: decryptedId,
+            first_number: null,
+            second_number: null,
+            operation: null,
+            result: null,
+            generated_code: null,
+            completed: false,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
 
-      // Create new record if none exists
-      const { data: newRecord, error: insertError } = await supabase
-        .from('dev_detective')
-        .insert([{
-          mouse_keyboard_quest_id: questData.id,
-          student_id: studentId,
-          first_number: null,
-          second_number: null,
-          operation: null,
-          result: null,
-          generated_code: null,
-          completed: false,
-          started_at: new Date().toISOString(),
-          last_activity: new Date().toISOString()
-        }])
-        .select()
-        .single();
+        if (insertError) {
+          console.error('Error creating new record:', insertError);
+          return;
+        }
 
-      if (insertError) {
-        console.error('Error creating new record:', insertError);
-        return;
-      }
-
-      if (newRecord) {
-        setProgressRecord(newRecord);
+        if (newRecord) {
+          setProgressRecord(newRecord);
+        }
       }
     } catch (error) {
-      console.error('Error in initializeProgressRecord:', error);
+      console.error('Error in initialization:', error);
+    } finally {
+      setIsInitialized(true);
     }
   };
+
+  useEffect(() => {
+    const userIdCookie = Cookies.get('userId');
+    if (userIdCookie && !isInitialized) {
+      const decryptedId = decryptData(userIdCookie);
+      setUserId(decryptedId);
+      initializeUser(decryptedId);
+    } else if (!userIdCookie) {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    }
+  }, [principalId, schoolId, teacherId, isInitialized, initializeUser, decryptData, router]);
 
   const updateProgress = async () => {
     if (!progressRecord || !userId) return;
@@ -279,34 +299,27 @@ const MathDetectiveContent = () => {
 
       if (questError) throw questError;
 
-      setIsDevDetectiveCompleted(true);
+      try{
+        const {error: computerBasicsError } = await supabase
+            .from('mouse_keyboard_quest')
+            .update({
+              completed_at: new Date().toISOString(),
+              completed: true
+            })
+            .eq('student_id', userId)
+    
+            if(computerBasicsError) throw computerBasicsError;
+      }
+      catch(error){
+          console.log('Error While Updating Completion', error);
+      }
+
       router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     } catch (error) {
       console.error('Error updating progress:', error);
     }
   };
 
-  // Initialize user and check completion
-  useEffect(() => {
-    const initializeUser = () => {
-      const userIdCookie = Cookies.get('userId');
-      if (userIdCookie) {
-        const decryptedId = decryptData(userIdCookie);
-        setUserId(decryptedId);
-        if (!isDevDetectiveCompleted) {
-          initializeProgressRecord(decryptedId);
-        }
-      } else {
-        router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-      }
-    };
-
-    if (principalId && schoolId && teacherId) {
-      initializeUser();
-    }
-  }, [principalId, schoolId, teacherId, isDevDetectiveCompleted, router, decryptData]);
-
-  // Component functions
   const startListening = () => {
     if (recognitionRef.current) {
       recognitionRef.current.start();

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, Plus, Trophy, ArrowDownAZ, Hash, ArrowRight } from 'lucide-react';
+import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
 
 const InteractiveFileTasks = () => {
   // Task and progress management
@@ -123,6 +124,7 @@ const InteractiveFileTasks = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">File Management Tutorial</h1>
+        <TeacherGuide context='Hello world' pageId='hello'/>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Progress:</span>
           <div className="flex gap-1">

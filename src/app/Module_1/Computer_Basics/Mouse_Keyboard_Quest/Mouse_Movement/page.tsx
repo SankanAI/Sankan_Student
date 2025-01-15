@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Cookies from "js-cookie";
+import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
 
 const EVENTS = {
   click: 'Left Click',
@@ -486,6 +487,7 @@ function EnhancedEmojiTrainer() {
 
   return (
     <div ref={containerRef} className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-">
+      <TeacherGuide context='Hello world' pageId='hello'/>
        <Dialog open={showCongrats} onOpenChange={setShowCongrats}>
         <DialogContent className="max-w-md">
           <DialogHeader>
