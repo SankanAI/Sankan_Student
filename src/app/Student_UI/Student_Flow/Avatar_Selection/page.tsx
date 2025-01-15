@@ -151,9 +151,10 @@ const SamuraiCard = ({ samurai, isSelected, onClick }: { samurai: SamuraiImage; 
 };
 
 function SamuraiGallery() {
-  const supabase = createClientComponentClient();
+
   const router = useRouter();
   const params = useSearchParams();
+  const supabase = createClientComponentClient();
   const [selectedSamurai, setSelectedSamurai] = useState<SamuraiImage | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingSamurai, setConfirmingSamurai] = useState<SamuraiImage | null>(null);
