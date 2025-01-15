@@ -1,9 +1,10 @@
 "use client";
+
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
 import { useState, useEffect, Suspense } from "react"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   Dialog,
   DialogContent,
@@ -151,16 +152,16 @@ const SamuraiCard = ({ samurai, isSelected, onClick }: { samurai: SamuraiImage; 
 
 function SamuraiGallery() {
   const supabase = createClientComponentClient();
+  const router = useRouter();
+  const params = useSearchParams();
   const [selectedSamurai, setSelectedSamurai] = useState<SamuraiImage | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingSamurai, setConfirmingSamurai] = useState<SamuraiImage | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userid, setuserid]=useState<string>("");
-  const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
-  const params = useSearchParams();
   
   // Extract parameters from URL
   const principalId = params.get('principalId');
