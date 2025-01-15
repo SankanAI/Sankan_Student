@@ -150,6 +150,7 @@ const SamuraiCard = ({ samurai, isSelected, onClick }: { samurai: SamuraiImage; 
 };
 
 function SamuraiGallery() {
+  const supabase = createClientComponentClient();
   const [selectedSamurai, setSelectedSamurai] = useState<SamuraiImage | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingSamurai, setConfirmingSamurai] = useState<SamuraiImage | null>(null);
@@ -157,7 +158,6 @@ function SamuraiGallery() {
   const [error, setError] = useState<string | null>(null);
   const [userid, setuserid]=useState<string>("");
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const [isChecking, setIsChecking] = useState(true);
   const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
   const params = useSearchParams();
