@@ -192,6 +192,9 @@ type KeyboardRecord = {
 };
 
 export default function TypingTriumph() {
+  
+  const supabase = createClientComponentClient({supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY});
   const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
   const [currentWord, setCurrentWord] = useState('');
   const [userInput, setUserInput] = useState('');
@@ -203,7 +206,6 @@ export default function TypingTriumph() {
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [correctAttempts, setCorrectAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClientComponentClient();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [KeyComplete, setkeyComplete]=useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
