@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -468,6 +468,7 @@ export default function TypingTriumph() {
   const isLevelComplete = score >= currentLevel.requiredScore;
 
   return (
+    <Suspense>
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
       <div className="max-w-2xl mx-auto space-y-4">
         <Card className="p-6">
@@ -576,5 +577,6 @@ export default function TypingTriumph() {
         )}
       </div>
     </div>
+    </Suspense>
   );
 }
