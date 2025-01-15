@@ -197,7 +197,6 @@ export default function TypingTriumph() {
   const [userInput, setUserInput] = useState('');
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
-  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [accuracy, setAccuracy] = useState(100);
@@ -233,15 +232,19 @@ export default function TypingTriumph() {
     return currentLevel.words[randomIndex];
   };
 
-  const decryptData = (encryptedText: string): string => {
+  // Utility functions
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
     const [ivBase64, encryptedBase64] = encryptedText.split('.');
-    if (!ivBase64 || !encryptedBase64) return ''; 
+    if (!ivBase64 || !encryptedBase64) return '';
+    
     const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
     const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
-    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
     return new TextDecoder().decode(decryptedBytes);
-  };
+  }, []);
 
    const initializeProgressRecord = async (studentId: string) => {
     try {

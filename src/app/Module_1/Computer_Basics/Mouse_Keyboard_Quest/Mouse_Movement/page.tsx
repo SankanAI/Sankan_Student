@@ -74,7 +74,6 @@ export default function EnhancedEmojiTrainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [emojis, setEmojis] = useState<EmojiBubble[]>([]);
   const router = useRouter();
-  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
   const [userId, setUserId] = useState<string | null>(null);
   const params = useSearchParams();
   const [progressRecord, setProgressRecord] = useState<MouseRecord | null>(null);
@@ -102,15 +101,19 @@ export default function EnhancedEmojiTrainer() {
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
 
-  const decryptData = (encryptedText: string): string => {
-    const [ivBase64, encryptedBase64] = encryptedText.split('.');
-    if (!ivBase64 || !encryptedBase64) return ''; 
-    const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
-    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
-    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
-    return new TextDecoder().decode(decryptedBytes);
-  };
+ // Utility functions
+ const decryptData = useCallback((encryptedText: string): string => {
+  if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+  const [ivBase64, encryptedBase64] = encryptedText.split('.');
+  if (!ivBase64 || !encryptedBase64) return '';
+  
+  const encoder = new TextEncoder();
+  const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+  const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+  const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+  
+  return new TextDecoder().decode(decryptedBytes);
+}, []);
 
 
   const updateProgress = async (stats: EventStats) => {
