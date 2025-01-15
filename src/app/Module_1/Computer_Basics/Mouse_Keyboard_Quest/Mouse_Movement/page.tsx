@@ -258,7 +258,7 @@ export default function EnhancedEmojiTrainer() {
         
         if (mouseMovementData?.completed) {
           setIsMouseMovementCompleted(true);
-          router.push(`Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         }
       } catch (error) {
         console.log('Error checking completion status:', error);

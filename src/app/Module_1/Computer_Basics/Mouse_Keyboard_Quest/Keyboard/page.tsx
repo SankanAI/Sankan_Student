@@ -335,7 +335,7 @@ export default function TypingTriumph() {
         
         if (mouseMovementData?.completed) {
           setIsKeyboardMovementCompleted(true);
-          router.push(`Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         }
       } catch (error) {
         console.log('Error checking completion status:', error);
