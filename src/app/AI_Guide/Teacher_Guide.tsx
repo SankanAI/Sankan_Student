@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mic, MicOff, Send, Loader2, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Send, Loader2} from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Web Speech API Types
@@ -118,6 +118,7 @@ const TeacherGuide: React.FC<TeacherGuideProps> = ({ context, pageId }) => {
 
         recognition.onerror = (event: Event) => {
           setError('Speech recognition error occurred');
+          console.log(event)
           setIsListening(false);
         };
 
@@ -144,6 +145,7 @@ const TeacherGuide: React.FC<TeacherGuideProps> = ({ context, pageId }) => {
     if (speechRef.current && window.speechSynthesis) {
       window.speechSynthesis.cancel();
       speechRef.current.text = text;
+      console.log(pageId, response)
       speechRef.current.lang = selectedLanguage === 'hindi' ? 'hi-IN' : 'en-US';
       window.speechSynthesis.speak(speechRef.current);
     }

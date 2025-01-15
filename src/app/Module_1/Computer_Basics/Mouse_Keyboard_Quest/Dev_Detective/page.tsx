@@ -173,7 +173,7 @@ const MathDetectiveContent = () => {
   const initializeUser =async (decryptedId: string) => {
     try {
       // First, check if there's an existing dev_detective record that's completed
-      const { data: existingComplete, error: completeError } = await supabase
+      const { data: existingComplete } = await supabase
         .from('dev_detective')
         .select('completed')
         .eq('student_id', decryptedId)
