@@ -376,6 +376,7 @@ print(c)  # Result: ${result}`;
 
   // Main JSX
   return (
+    <Suspense>
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
       <div className="w-2/4 ml-[25%] mx-auto space-y-4">
         {/* Instructions Dialog */}
@@ -570,6 +571,7 @@ print(c)  # Result: ${result}`;
         </Dialog>
       </div>
     </div>
+    </Suspense>
   );
 };
 
