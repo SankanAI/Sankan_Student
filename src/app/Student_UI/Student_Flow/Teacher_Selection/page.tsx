@@ -1,4 +1,6 @@
 "use client";
+
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
@@ -12,7 +14,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import {useRouter,  useSearchParams} from "next/navigation";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Cookies from "js-cookie";
 
 interface TeacherProfile {
@@ -148,16 +149,17 @@ const TeacherCard = ({
 };
 
 function Home() {
+
+  const supabase = createClientComponentClient();
+  const router=useRouter();
+  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
+  const params = useSearchParams();
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherProfile | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingTeacher, setConfirmingTeacher] = useState<TeacherProfile | null>(null);
-  const router=useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userid, setuserid]=useState<string>("");
-  const supabase = createClientComponentClient();
-  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
-  const params = useSearchParams();
   const [isChecking, setIsChecking] = useState(true);
   
   // Extract parameters from URL
