@@ -7,6 +7,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+
+//Updated
 // Define types for better type safety
 type CompletionStatus = {
   completed: boolean;
