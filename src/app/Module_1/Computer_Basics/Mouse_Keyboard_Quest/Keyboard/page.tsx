@@ -1,4 +1,5 @@
 "use client";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Cookies from "js-cookie";
 
 type GameLevel = {
@@ -192,7 +192,8 @@ type KeyboardRecord = {
 };
 
 function TypingTriumpContent() {
-  
+  const router=useRouter();
+  const params = useSearchParams();
   const supabase = createClientComponentClient();
   const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
   const [currentWord, setCurrentWord] = useState('');
@@ -211,8 +212,7 @@ function TypingTriumpContent() {
   const [showCongrats, setShowCongrats] = useState(false);
   const [isKeyboardMovementCompleted, setIsKeyboardMovementCompleted] = useState(false);
   const [progressRecord, setProgressRecord] = useState<KeyboardRecord | null>(null);
-  const router=useRouter();
-  const params = useSearchParams();
+ 
   
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
