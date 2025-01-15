@@ -68,7 +68,7 @@ type DevDetectiveRecord = {
 
 type Operation = '+' | '-' | '*' | '/';
 
-const MathDetective = () => {
+const MathDetectiveContent = () => {
   const router = useRouter();
   const params = useSearchParams();
   const supabase = createClientComponentClient();
@@ -571,6 +571,19 @@ print(c)  # Result: ${result}`;
         </Dialog>
       </div>
     </div>
+    </Suspense>
+  );
+};
+
+
+const MathDetective = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <MathDetectiveContent />
     </Suspense>
   );
 };
