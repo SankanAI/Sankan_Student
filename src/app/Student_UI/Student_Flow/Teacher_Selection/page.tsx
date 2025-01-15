@@ -150,10 +150,11 @@ const TeacherCard = ({
 
 function Home() {
 
-  const supabase = createClientComponentClient();
   const router=useRouter();
-  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
   const params = useSearchParams();
+  const supabase = createClientComponentClient();
+  
+  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherProfile | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingTeacher, setConfirmingTeacher] = useState<TeacherProfile | null>(null);
