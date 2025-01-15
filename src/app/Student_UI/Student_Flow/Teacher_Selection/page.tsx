@@ -2,7 +2,7 @@
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import {
   Dialog,
   DialogContent,
@@ -147,7 +147,7 @@ const TeacherCard = ({
   );
 };
 
-export default function TeacherGallery() {
+function Home() {
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherProfile | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingTeacher, setConfirmingTeacher] = useState<TeacherProfile | null>(null);
@@ -336,3 +336,18 @@ export default function TeacherGallery() {
     </div>
   )
 }
+
+const TeacherSelection = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <Home />
+    </Suspense>
+  );
+};
+
+
+export default TeacherSelection;

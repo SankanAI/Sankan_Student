@@ -2,7 +2,7 @@
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   Dialog,
@@ -149,7 +149,7 @@ const SamuraiCard = ({ samurai, isSelected, onClick }: { samurai: SamuraiImage; 
   );
 };
 
-export default function SamuraiGallery() {
+function SamuraiGallery() {
   const [selectedSamurai, setSelectedSamurai] = useState<SamuraiImage | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [confirmingSamurai, setConfirmingSamurai] = useState<SamuraiImage | null>(null);
@@ -355,3 +355,18 @@ export default function SamuraiGallery() {
     </div>
   );
 }
+
+const AvatarSelection = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <SamuraiGallery />
+    </Suspense>
+  );
+};
+
+
+export default AvatarSelection;

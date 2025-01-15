@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +70,7 @@ type MouseRecord = {
   last_activity: string;  // TIMESTAMP WITH TIME ZONE
 };
 
-export default function EnhancedEmojiTrainer() {
+function EnhancedEmojiTrainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [emojis, setEmojis] = useState<EmojiBubble[]>([]);
   const router = useRouter();
@@ -652,3 +652,19 @@ export default function EnhancedEmojiTrainer() {
     </div>
   );
 }
+
+
+const MouseMovement = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <EnhancedEmojiTrainer />
+    </Suspense>
+  );
+};
+
+
+export default MouseMovement;

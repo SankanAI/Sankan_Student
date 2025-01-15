@@ -1,7 +1,7 @@
 "use client";
 import { Timeline } from "@/components/ui/timeline";
 import { Mouse, Keyboard, Sigma } from 'lucide-react';
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
@@ -237,4 +237,17 @@ const Home = () => {
   return <Timeline data={generateTimelineData()} name="Mouse keyboard Quest" />;
 };
 
-export default Home;
+const MousekeyboardQuest = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <Home />
+    </Suspense>
+  );
+};
+
+
+export default MousekeyboardQuest;

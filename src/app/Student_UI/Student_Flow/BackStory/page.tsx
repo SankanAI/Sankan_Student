@@ -5,11 +5,11 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function BackStory() {
+function BackStory() {
   const video = useRef<HTMLVideoElement>(null);
   const [loading, setLoading] = useState(true); // State to track loading
   const router = useRouter();
@@ -89,3 +89,19 @@ export default function BackStory() {
     </>
   );
 }
+
+
+const Home = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <BackStory />
+    </Suspense>
+  );
+};
+
+
+export default Home;

@@ -191,10 +191,9 @@ type KeyboardRecord = {
   updated_at: string;   // TIMESTAMP WITH TIME ZONE returned as ISO string
 };
 
-export default function TypingTriumph() {
+function TypingTriumpContent() {
   
-  const supabase = createClientComponentClient({supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY});
+  const supabase = createClientComponentClient();
   const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
   const [currentWord, setCurrentWord] = useState('');
   const [userInput, setUserInput] = useState('');
@@ -470,7 +469,6 @@ export default function TypingTriumph() {
   const isLevelComplete = score >= currentLevel.requiredScore;
 
   return (
-    <Suspense>
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
       <div className="max-w-2xl mx-auto space-y-4">
         <Card className="p-6">
@@ -579,6 +577,20 @@ export default function TypingTriumph() {
         )}
       </div>
     </div>
-    </Suspense>
   );
 }
+
+const TypingTriump = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <TypingTriumpContent />
+    </Suspense>
+  );
+};
+
+
+export default TypingTriump;

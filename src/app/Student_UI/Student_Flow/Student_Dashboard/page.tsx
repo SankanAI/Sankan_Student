@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {Suspense} from 'react';
 import { ScrollText, Award, Target, Trophy, Star, Timer } from 'lucide-react';
 import {
   Card,
@@ -37,7 +37,7 @@ const studentData = {
   ]
 };
 
-export default function StudentDashboard() {
+function Home() {
   return (
     <div className="relative flex min-h-screen flex-col bg-[#221111]">
       {/* Header */}
@@ -216,3 +216,18 @@ export default function StudentDashboard() {
     </div>
   );
 }
+
+const StudentDashboard = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <Home/>
+    </Suspense>
+  );
+};
+
+
+export default StudentDashboard;

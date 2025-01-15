@@ -364,19 +364,16 @@ print(c)  # Result: ${result}`;
   // Validation check
   if (!principalId || !schoolId || !teacherId) {
     return (
-      <Suspense>
       <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
         <Alert variant="destructive">
           <AlertDescription>Missing required parameters</AlertDescription>
         </Alert>
       </div>
-      </Suspense>
     );
   }
 
   // Main JSX
   return (
-    <Suspense>
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
       <div className="w-2/4 ml-[25%] mx-auto space-y-4">
         {/* Instructions Dialog */}
@@ -571,7 +568,6 @@ print(c)  # Result: ${result}`;
         </Dialog>
       </div>
     </div>
-    </Suspense>
   );
 };
 

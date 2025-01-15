@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { 
@@ -224,4 +224,18 @@ const CodingJourneyRoadmap = () => {
   );
 };
 
-export default CodingJourneyRoadmap;
+
+const GameMap = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <CodingJourneyRoadmap/>
+    </Suspense>
+  );
+};
+
+
+export default GameMap;
