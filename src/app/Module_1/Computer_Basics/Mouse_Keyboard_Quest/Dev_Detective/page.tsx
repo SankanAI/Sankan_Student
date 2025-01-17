@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Calculator, Code, Volume2, ArrowRight } from 'lucide-react';
+import { Calculator, Code, ArrowRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

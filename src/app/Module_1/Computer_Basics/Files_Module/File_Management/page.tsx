@@ -29,9 +29,32 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { useRouter, useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import Cookies from "js-cookie";
+// import { useRouter, useSearchParams } from 'next/navigation';
+// import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+// import Cookies from "js-cookie";
+
+
+// type FileManagement = {
+//   id: string;  // UUID
+//   file_safety_quest_id: string | null;  // UUID, nullable foreign key
+//   student_id: string | null;  // UUID, nullable foreign key
+  
+//   // Project completion flags
+//   react_completion: boolean;
+//   flask_completion: boolean;
+//   android_completion: boolean;
+//   ai_completion: boolean;
+//   node_completion: boolean;
+//   vue_completion: boolean;
+  
+//   // Overall completion status
+//   completed: boolean;
+  
+//   // Timestamps
+//   started_at: string;  // ISO timestamp
+//   completed_at: string | null;  // ISO timestamp, nullable
+//   last_activity: string;  // ISO timestamp
+// };
 
 interface ProjectTemplate {
   name: string;
@@ -236,16 +259,16 @@ const ProjectLearningInterface = () => {
   const [mode, setMode] = useState<'select' | 'create'>('select');
   const [completedProjects, setCompletedProjects] = useState<Record<string, boolean>>({});
   const [projectProgress, setProjectProgress] = useState<Record<string, number>>({});
-  const router = useRouter();
-  const params = useSearchParams();
-  const supabase = createClientComponentClient();
+  // const router = useRouter();
+  // const params = useSearchParams();
+  // const supabase = createClientComponentClient();
 
 
    
   // Get URL parameters
-  const principalId = params.get('principalId');
-  const schoolId = params.get('schoolId');
-  const teacherId = params.get('teacherId');
+  // const principalId = params.get('principalId');
+  // const schoolId = params.get('schoolId');
+  // const teacherId = params.get('teacherId');
 
 
   const calculateProgress = (projectKey: string, currentItems: FolderItem[]) => {

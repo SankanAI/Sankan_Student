@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Plus, Trophy, ArrowDownAZ, Hash, ArrowRight } from 'lucide-react';
+import { FileText, Plus, Trophy, Hash, ArrowRight } from 'lucide-react';
 import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -414,7 +414,7 @@ useEffect(() => {
                 <DialogTitle>Congratulations! 🎉</DialogTitle>
               </DialogHeader>
               <div className="py-4">
-                <p>You've completed all file operations tasks!</p>
+                <p>{"You've completed all file operations tasks!"}</p>
               </div>
               <Button onClick={() => router.push(`/Module_1/Computer_Basics/Files_Module?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}>
                 Continue

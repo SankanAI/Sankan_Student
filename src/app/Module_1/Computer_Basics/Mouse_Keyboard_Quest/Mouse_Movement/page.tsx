@@ -247,7 +247,7 @@ function EnhancedEmojiTrainer() {
       console.log('Error initializing progress record:', error);
       // Handle error appropriately - maybe show an error message to the user
     }
-  };u
+  };
 
   useEffect(()=>{
     const checkCompletion = async (decryptedId: string) => {

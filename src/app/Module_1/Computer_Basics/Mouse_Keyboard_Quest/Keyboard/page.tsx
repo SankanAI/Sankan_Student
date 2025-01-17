@@ -463,7 +463,8 @@ function TypingTriumpContent() {
     }
     else{ 
       console.log("Completed")
-      setkeyComplete(true)
+      setkeyComplete(true);
+      console.log(KeyComplete, level3Score, level3Time)
       setGameCompleted(true);
      }
   };

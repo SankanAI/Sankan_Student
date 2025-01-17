@@ -3,7 +3,7 @@ import React from 'react';
 import { Shield, Lock, Globe, Users, ShieldAlert, Wifi, PhoneCall, LucideIcon } from 'lucide-react';
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+// import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -28,11 +28,11 @@ interface ModuleRowProps {
 }
 
 // Interface for query parameters
-interface QueryParams {
-  principalId: string | null;
-  schoolId: string | null;
-  teacherId: string | null;
-}
+// interface QueryParams {
+//   principalId: string | null;
+//   schoolId: string | null;
+//   teacherId: string | null;
+// }
 
 const ModuleBox: React.FC<ModuleBoxProps> = ({ 
   title, 
@@ -166,6 +166,7 @@ const Home: React.FC = () => {
     if (userIdCookie) {
       const decryptedId = decryptData(userIdCookie, secretKey);
       setUserId(decryptedId);
+      console.log(userId)
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     }
