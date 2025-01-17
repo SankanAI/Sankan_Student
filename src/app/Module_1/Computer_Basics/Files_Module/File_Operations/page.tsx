@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, Plus, Trophy, ArrowDownAZ, Hash, ArrowRight } from 'lucide-react';
 import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Cookies from "js-cookie";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+
+type FileOperationsRecord = {
+  id: string;
+  file_safety_quest_id: string;
+  student_id: string;
+  alphabetical_sort_completed: boolean;
+  numerical_sort_completed: boolean;
+  content_copy_completed: boolean;
+  content_validation_completed: boolean;
+  append_operation_completed: boolean;
+  completed: boolean;
+  started_at: string;
+  completed_at: string | null;
+  last_activity: string;
+};
+
 
 const InteractiveFileTasks = () => {
   // Task and progress management
@@ -24,8 +45,31 @@ const InteractiveFileTasks = () => {
     { id: 3, name: 'apple.png', type: 'image' },
     { id: 4, name: '3notes.txt', type: 'text' }
   ]);
-  const [sortType, setSortType] = useState('alpha');
+  const [sortType, setSortType] = useState('numeric');
   const [sortError, setSortError] = useState('');
+  const [showValidateButton, setShowValidateButton] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+  const [sorting, setSorting]=useState<boolean>(false);
+  const [copying, setCopying]=useState<boolean>(false);
+  const [Append, setAppend]=useState<boolean>(false);
+  const router = useRouter();
+  const params = useSearchParams();
+  const supabase = createClientComponentClient();
+  
+  // State management
+  const [userId, setUserId] = useState<string | null>(null);
+  const [progressRecord, setProgressRecord] = useState<FileOperationsRecord | null>(null);
+  const [showCongrats, setShowCongrats] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  
+  // Get URL parameters
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+useEffect(() => {
+  setIsClient(true);
+}, []);
 
   // File content task state
   const [sourceContent, setSourceContent] = useState('');
@@ -44,7 +88,6 @@ const InteractiveFileTasks = () => {
 
   // Sorting validation logic
   const validateSorting = useCallback(() => {
-    const sortedFiles = [...files];
     const correctOrder = [...files].sort((a, b) => {
       if (sortType === 'alpha') {
         return a.name.localeCompare(b.name);
@@ -55,23 +98,38 @@ const InteractiveFileTasks = () => {
       }
     });
 
-    const isCorrect = JSON.stringify(sortedFiles) === JSON.stringify(correctOrder);
+    const isCorrect = JSON.stringify(files) === JSON.stringify(correctOrder);
+    
     if (isCorrect) {
       setCompletedTasks(prev => ({ ...prev, 1: true }));
       setSortError('');
+      setShowValidateButton(false);
+      // Automatically move to next task after a short delay
+      setTimeout(() => {
+        setActiveTask(2);
+      }, 1500);
     } else {
       setSortError('The files are not correctly sorted. Try again!');
     }
+    setSorting(isCorrect)
     return isCorrect;
   }, [files, sortType]);
 
   // Handle file reordering
-  const moveFile = (fromIndex:number, toIndex:number) => {
+  const moveFile = (fromIndex: number, toIndex: number) => {
     const newFiles = [...files];
     const [movedFile] = newFiles.splice(fromIndex, 1);
     newFiles.splice(toIndex, 0, movedFile);
     setFiles(newFiles);
-    validateSorting();
+    setShowValidateButton(true);
+    setSortError('');
+  };
+
+  // Reset sorting when changing sort type
+  const handleSortTypeChange = (newSortType: string) => {
+    setSortType(newSortType);
+    setSortError('');
+    setCompletedTasks(prev => ({ ...prev, 1: false }));
   };
 
   // Content validation handler
@@ -88,13 +146,17 @@ const InteractiveFileTasks = () => {
     }
 
     const isMatch = trimmedSource === trimmedTarget;
+    setCopying(isMatch)
     setContentValidation({
       isValid: isMatch,
-      message: isMatch ? 'Perfect match!' : 'Contents do not match. Try again!'
+      message: isMatch ? 'Perfect match! Moving to next task...' : 'Contents do not match. Try again!'
     });
 
     if (isMatch) {
       setCompletedTasks(prev => ({ ...prev, 2: true }));
+      setTimeout(() => {
+        setActiveTask(3);
+      }, 1500);
     }
   };
 
@@ -112,19 +174,196 @@ const InteractiveFileTasks = () => {
       const newContent = prev + (prev ? '\n' : '') + appendContent.trim();
       setOperationResult({
         success: true,
-        message: 'Content appended successfully!'
+        message: 'Content appended successfully! Task completed!'
       });
       setCompletedTasks(prev => ({ ...prev, 3: true }));
+      setAppend(true);
       return newContent;
     });
     setAppendContent('');
   };
 
+  // Decryption utility
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
+
+  // Initialize progress record
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+
+      const { data: computerBasicsData, error:computerBasicsError  } = await supabase
+      .from('computer_basics')
+      .select('id')
+      .eq('student_id', studentId)
+      .single();
+
+      if (computerBasicsError || !computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Check for existing file_safety record
+      let { data: fileSafetyData } = await supabase
+        .from('file_safety')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+
+      if (!fileSafetyData) {
+          const { data: newfileSafetyData, error: fileSafetyDataError } = await supabase
+            .from('file_safety')
+            .insert([{
+              computer_basics_id: computerBasicsData?.id,
+              student_id: studentId,
+              started_at: new Date().toISOString(),
+              last_activity: new Date().toISOString()
+            }])
+            .select()
+            .single();
+    
+          if (fileSafetyDataError) throw fileSafetyDataError;
+          fileSafetyData = newfileSafetyData;
+      }
+
+      // Check for existing file operations record
+      const { data: existingRecord } = await supabase
+        .from('file_operations')
+        .select('*')
+        .eq('file_safety_quest_id', fileSafetyData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      // if (existingError && existingError.code !== 'PGRST116') {
+      //   console.error('Error checking existing record:', existingError);
+      //   return;
+      // }
+
+      if (existingRecord) {
+        setProgressRecord(existingRecord);
+        setIsCompleted(existingRecord.completed);
+      } else {
+        // Create new record if none exists
+        const { data: newRecord, error: insertError } = await supabase
+          .from('file_operations')
+          .insert([{
+            file_safety_quest_id: fileSafetyData?.id,
+            student_id: studentId,
+            alphabetical_sort_completed: false,
+            numerical_sort_completed: false,
+            content_copy_completed: false,
+            content_validation_completed: false,
+            append_operation_completed: false,
+            completed: false,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (newRecord) {
+          setProgressRecord(newRecord);
+        }
+      }
+    } catch (error) {
+      console.log('Error in initializeProgressRecord:', error);
+    }
+  };
+
+  // Update progress in database
+  const updateProgress = async () => {
+    if (!progressRecord || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('file_operations')
+        .update({
+          alphabetical_sort_completed:sorting,
+          numerical_sort_completed:sorting,
+          content_copy_completed:copying,
+          content_validation_completed:copying,
+          append_operation_completed:Append,
+          last_activity: new Date().toISOString()
+        })
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      // Check if all tasks are completed
+      const allCompleted = sorting && copying && Append;
+
+      if (allCompleted) {
+        const { error: completionError } = await supabase
+          .from('file_operations')
+          .update({
+            completed: true,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', progressRecord.id);
+
+        if (completionError) throw completionError;
+        
+        setIsCompleted(true);
+        setShowCongrats(true);
+      }
+    } catch (error) {
+      console.log('Error updating progress:', error);
+    }
+  };
+
+  // Initialize on component mount
+  useEffect(() => {
+    if (Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      setUserId(decryptedId);
+      initializeProgressRecord(decryptedId);
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    }
+  }, [sorting, copying, Append]);
+
+  // Check completion status
+  useEffect(() => {
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: fileOpsData, error } = await supabase
+          .from('file_operations')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (fileOpsData?.completed) {
+          setIsCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Files_Module?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+
+    if (userId) {
+      checkCompletion(userId);
+    }
+  }, [userId]);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">File Management Tutorial</h1>
-        <TeacherGuide context='Hello world' pageId='hello'/>
+        <h1 className="text-3xl font-bold tracking-tighter">File Management Tutorial</h1>
+        {isClient && <TeacherGuide context='Hello world' pageId='hello'/>}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Progress:</span>
           <div className="flex gap-1">
@@ -139,9 +378,49 @@ const InteractiveFileTasks = () => {
           </div>
         </div>
       </div>
+          {/* Navigation Controls */}
+          <div className="flex justify-between mt-8">
+        <Button
+          variant="outline"
+          onClick={() => setActiveTask(prev => Math.max(1, prev - 1))}
+          disabled={activeTask === 1}
+        >
+          Previous Task
+        </Button>
+        {activeTask<3?(
+              <Button
+                onClick={() => setActiveTask(prev => Math.min(3, prev + 1))}
+                disabled={activeTask === 3}
+              >
+                Next Task
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+        ):(
+            <Button
+              onClick={() => {updateProgress(); console.log(isCompleted)}}
+              
+            >
+              Final Submit
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+        )}
+      </div>
 
       {/* Sorting Task */}
       <Card className={activeTask === 1 ? 'ring-2 ring-blue-500' : ''}>
+        <Dialog open={showCongrats}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Congratulations! 🎉</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p>You've completed all file operations tasks!</p>
+              </div>
+              <Button onClick={() => router.push(`/Module_1/Computer_Basics/Files_Module?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}>
+                Continue
+              </Button>
+            </DialogContent>
+          </Dialog>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-sm">1</span>
@@ -153,18 +432,11 @@ const InteractiveFileTasks = () => {
           <div className="space-y-4">
             <div className="flex gap-4">
               <Button 
-                variant={sortType === 'alpha' ? 'default' : 'outline'}
-                onClick={() => setSortType('alpha')}
-              >
-                <ArrowDownAZ className="mr-2 h-4 w-4" />
-                Alphabetical
-              </Button>
-              <Button 
                 variant={sortType === 'numeric' ? 'default' : 'outline'}
-                onClick={() => setSortType('numeric')}
+                onClick={() => handleSortTypeChange('numeric')}
               >
                 <Hash className="mr-2 h-4 w-4" />
-                Numerical
+                Sort first alphabets, Then Numerical Files
               </Button>
             </div>
 
@@ -200,6 +472,12 @@ const InteractiveFileTasks = () => {
               ))}
             </div>
 
+            {showValidateButton && (
+              <Button onClick={validateSorting} className="mt-4">
+                Check Sorting
+              </Button>
+            )}
+
             {sortError && (
               <Alert variant="destructive">
                 <AlertDescription>{sortError}</AlertDescription>
@@ -209,7 +487,7 @@ const InteractiveFileTasks = () => {
             {completedTasks[1] && (
               <Alert className="bg-green-50">
                 <Trophy className="h-4 w-4 text-green-500" />
-                <AlertDescription>Perfect sorting! Move on to the next task.</AlertDescription>
+                <AlertDescription>Perfect sorting! Moving to the next task...</AlertDescription>
               </Alert>
             )}
           </div>
@@ -303,26 +581,21 @@ const InteractiveFileTasks = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Navigation Controls */}
-      <div className="flex justify-between mt-8">
-        <Button
-          variant="outline"
-          onClick={() => setActiveTask(prev => Math.max(1, prev - 1))}
-          disabled={activeTask === 1}
-        >
-          Previous Task
-        </Button>
-        <Button
-          onClick={() => setActiveTask(prev => Math.min(3, prev + 1))}
-          disabled={activeTask === 3}
-        >
-          Next Task
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
     </div>
   );
 };
 
-export default InteractiveFileTasks;
+
+const FileOperations = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <InteractiveFileTasks/>
+    </Suspense>
+  );
+};
+
+export default FileOperations;

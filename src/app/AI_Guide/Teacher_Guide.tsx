@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Mic, MicOff, Send, Loader2} from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Audio_Ripple from "@/app/AI_Guide/Audio_Ripple"
 
 // Web Speech API Types
 interface SpeechRecognitionEvent extends Event {
@@ -208,12 +209,11 @@ const TeacherGuide: React.FC<TeacherGuideProps> = ({ context, pageId }) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="fixed bottom-4 right-4 shadow-lg hover:shadow-xl transition-shadow"
+        <div 
+          className="fixed bottom-4 right-4 shadow-lg hover:shadow-xl transition-shadow rounded-3xl overflow-hidden"
         >
-          Ask Teacher
-        </Button>
+          <Audio_Ripple/>
+        </div>
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">

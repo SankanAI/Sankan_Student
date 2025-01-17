@@ -15,41 +15,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 
-// Web Speech API Types
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionResultList {
-  readonly length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  readonly length: number;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-  isFinal?: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-  readonly transcript: string;
-  readonly confidence: number;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-  start(): void;
-}
-
-declare global {
-  interface Window {
-    webkitSpeechRecognition: new () => SpeechRecognition;
-  }
-}
 
 // Type Definitions
 type DevDetectiveRecord = {
@@ -93,7 +58,6 @@ const MathDetectiveContent = () => {
 
   // Refs
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Utility functions
   const decryptData = useCallback((encryptedText: string): string => {
@@ -146,25 +110,9 @@ const MathDetectiveContent = () => {
 
   // Initialize speech recognition
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      speechRef.current = new SpeechSynthesisUtterance();
-      
-      if (window.webkitSpeechRecognition) {
-        const recognition = new window.webkitSpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const result = event.results[0][0].transcript;
-          processVoiceCommand(result);
-        };
-        
-        recognitionRef.current = recognition;
-      }
-    }
-
+    speechRef.current = new SpeechSynthesisUtterance();
     return () => {
-      if (window.speechSynthesis) {
+      if (speechRef.current) {
         window.speechSynthesis.cancel();
       }
     };
@@ -320,13 +268,6 @@ const MathDetectiveContent = () => {
     }
   };
 
-  const startListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.start();
-      speak('Listening for your command');
-    }
-  };
-
   const calculateResult = () => {
     const a = parseFloat(firstNumber);
     const b = parseFloat(secondNumber);
@@ -415,17 +356,6 @@ print(c)  # Result: ${result}`;
 
         <Card className="p-6">
           <h1 className="text-2xl font-bold text-center mb-6 tracking-tighter">Math Detective</h1>
-          
-          {/* Voice Control Button */}
-          <Button 
-            onClick={startListening}
-            className="mb-4 gap-2"
-            variant="outline"
-          >
-            <Volume2 className="w-4 h-4" />
-            Voice Command
-          </Button>
-          
           {/* Step Progress */}
           <div className="flex justify-between mb-8">
             {[1, 2, 3, 4].map((step) => (

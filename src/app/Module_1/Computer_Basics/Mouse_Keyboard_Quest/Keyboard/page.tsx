@@ -311,10 +311,7 @@ function TypingTriumpContent() {
           .select()
           .single();
   
-        if (insertError) {
-          console.error('Error creating new record:', insertError);
-          return;
-        }
+        if (insertError) throw insertError;
   
         if (newRecord) {
           setProgressRecord(newRecord);
@@ -329,7 +326,7 @@ function TypingTriumpContent() {
   useEffect(()=>{
     const checkCompletion = async (decryptedId: string) => {
       try {
-        const { data: mouseMovementData, error } = await supabase
+        const { data: KeyboardMovementData, error } = await supabase
           .from('keyboard')
           .select('completed')
           .eq('student_id', decryptedId)
@@ -337,7 +334,7 @@ function TypingTriumpContent() {
 
         if (error) throw error;
         
-        if (mouseMovementData?.completed) {
+        if (KeyboardMovementData?.completed) {
           setIsKeyboardMovementCompleted(true);
           router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         }
@@ -357,7 +354,7 @@ function TypingTriumpContent() {
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
     }
-  },[userId, level1Score,level2Score,level3Score, level3Time, decryptData, initializeProgressRecord,isKeyboardMovementCompleted, principalId, teacherId, supabase, schoolId])
+  },[userId, currentLevel])
 
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
@@ -377,7 +374,7 @@ function TypingTriumpContent() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, KeyComplete, timeLeft]);
+  }, [isPlaying]);
 
 
   const finalSubmit=async(timing:number, scored:number)=>{
@@ -392,8 +389,6 @@ function TypingTriumpContent() {
       level3_time: timing ,  // INTERVAL will be returned as string
     };
 
-    setLevel3Score(scored);
-    setLevel3Time(timing);
     const allCompleted=(level1Score>11 && level2Score>29 && scored> 34)?true:false;
     if(allCompleted){updates.completed=allCompleted;}
 
@@ -433,7 +428,7 @@ function TypingTriumpContent() {
     setCorrectAttempts(0);
     setAccuracy(100);
     if (inputRef.current) inputRef.current.focus();
-  },[isPlaying, gameCompleted, score, timeLeft, currentWord, userInput, totalAttempts, correctAttempts, accuracy]);
+  },[isPlaying, timeLeft]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isPlaying) return;
@@ -454,10 +449,17 @@ function TypingTriumpContent() {
   const handleNextLevel = () => {
     const nextLevelIndex = LEVELS.findIndex(level => level.id === currentLevel.id) + 1;
     if (nextLevelIndex < LEVELS.length) {
-      if(currentLevel.id==1){setLevel1Time(currentLevel.timeLimit); setLevel1Score(score)}
-      else if(currentLevel.id==2){setLevel2Time(currentLevel.timeLimit); setLevel2Score(score)}
+      if(nextLevelIndex==1){setLevel1Time(currentLevel.timeLimit); setLevel1Score(score)}
+      else if(nextLevelIndex==2){setLevel2Time(currentLevel.timeLimit); setLevel2Score(score)}
+      else{  setLevel3Score(currentLevel.timeLimit);setLevel3Time(score);}
       setCurrentLevel(LEVELS[nextLevelIndex]);
       setGameCompleted(false);
+      setTimeLeft(LEVELS[nextLevelIndex].timeLimit); // Set the new time limit immediately
+      setScore(0);
+      setUserInput('');
+      setTotalAttempts(0);
+      setCorrectAttempts(0);
+      setAccuracy(100);
     }
     else{ 
       console.log("Completed")
@@ -546,7 +548,7 @@ function TypingTriumpContent() {
                     </Button>
                   )}
                   {(currentLevel.id === LEVELS.length ) && (
-                    <Button onClick={()=>{finalSubmit(currentLevel.timeLimit, score); setShowCongrats(true)}} className="flex-1">
+                    <Button onClick={()=>{finalSubmit(currentLevel.timeLimit, score); setShowCongrats(true);}} className="flex-1">
                        Dev Detective
                     </Button>
                   )}
