@@ -253,6 +253,7 @@ function TypingTriumpContent() {
   }, []);
 
    const initializeProgressRecord = async (studentId: string) => {
+    console.log(progressRecord);
     try {
       // Check for existing computer_basics record
       const { data: computerBasicsData, error: computerBasicsError } = await supabase
@@ -316,6 +317,7 @@ function TypingTriumpContent() {
     }
   };
 
+
   useEffect(()=>{
     const checkCompletion = async (decryptedId: string) => {
       try {
@@ -340,6 +342,7 @@ function TypingTriumpContent() {
       const decryptedId = decryptData(Cookies.get('userId')!);
       console.log("Decrypted userId:", decryptedId);
       setUserId(decryptedId);
+      startTimer();
       checkCompletion(decryptedId);
       if (!isKeyboardMovementCompleted) {
         initializeProgressRecord(decryptedId);
@@ -349,26 +352,32 @@ function TypingTriumpContent() {
     }
   },[userId])
 
-  useEffect(() => {
-    if (isPlaying && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsPlaying(false);
-            setGameCompleted(true);
-            if (timerRef.current) clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPlaying, currentLevel]);
+const startTimer = useCallback(() => {
+  if (isPlaying && timeLeft > 0) {
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setIsPlaying(false);
+          setGameCompleted(true);
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
 
+  return () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+}, [isPlaying, timeLeft]);
+
+
+useEffect(()=>{
+  const cleanup = startTimer();
+  return cleanup;
+},[startTimer])
 
   const finalSubmit=async(timing:number, scored:number)=>{
     if (!progressRecord || !userId) return;

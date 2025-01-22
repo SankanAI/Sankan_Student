@@ -299,7 +299,7 @@ function EnhancedEmojiTrainer() {
 
   const proceedToNextLevel = () => {
     setShowCongrats(false);
-    router.push('/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard');
+    router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
   };
 
   const speakText = useCallback((text: string) => {
