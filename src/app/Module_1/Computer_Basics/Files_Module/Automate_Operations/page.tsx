@@ -1,12 +1,15 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Folder, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import { Terminal, Folder, CheckCircle, XCircle,  ArrowRight } from 'lucide-react';
 import { FaReact } from "react-icons/fa";
 import { SiFlask } from "react-icons/si";
 import { PiAndroidLogoDuotone } from "react-icons/pi";
 import { PiBrainDuotone } from "react-icons/pi";
 import { RiNodejsLine } from "react-icons/ri";
 import { IoLogoVue } from "react-icons/io5";
+import Cookies from "js-cookie";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
   Card,
   CardContent,
@@ -27,7 +30,30 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { secureStorage } from '@/lib/storage';
 
+
+type FileManagement = {
+  id: string;  // UUID
+  file_safety_quest_id: string | null;  // UUID, nullable foreign key
+  student_id: string | null;  // UUID, nullable foreign key
+  
+  // Project completion flags
+  react_completion: boolean;
+  flask_completion: boolean;
+  android_completion: boolean;
+  ai_completion: boolean;
+  node_completion: boolean;
+  vue_completion: boolean;
+  
+  // Overall completion status
+  completed: boolean;
+  
+  // Timestamps
+  started_at: string;  // ISO timestamp
+  completed_at: string | null;  // ISO timestamp, nullable
+  last_activity: string;  // ISO timestamp
+};
 
 interface ProjectTemplate {
   name: string;
@@ -46,6 +72,9 @@ interface ProjectStructure {
 
 interface FolderItem {
   path: string;
+  id?:string;
+  name?:string;
+  parentId?:string;
   type: 'folder' | 'file' | 'zip';
 }
 
@@ -203,7 +232,7 @@ const ProjectStructureDisplay = ({ structure, level = 0 }: { structure: ProjectS
           )}
           <span className="text-sm">{item.name}</span>
           <span className="text-xs text-gray-500">
-            {item.type === 'folder' ? 'mkdir -p' : 'touch'} {item.name}
+            {item.type === 'folder' ? 'mkdir' : 'touch'} {item.name}
           </span>
           {item.children && (
             <div className="ml-4">
@@ -226,12 +255,258 @@ const ProjectLearningInterface = () => {
   const [validationResults, setValidationResults] = useState<string[]>([]);
   const [mode, setMode] = useState<'select' | 'create'>('select');
   const terminalRef = useRef<HTMLDivElement>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [ProjectObject, setProjectObject]=useState<Record<string, boolean>>({});
+  const [progressRecord, setProgressRecord] = useState<FileManagement | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const router = useRouter();
+  const params = useSearchParams();
+  const supabase = createClientComponentClient();
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
 
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+      console.log(isCompleted);
     }
-  }, [commandHistory]);
+  }, []);
+
+
+  const initialize_Completion=()=>{
+    const keys=Object.keys(projectTemplates);
+    for(let i=0;i<keys.length;i++){
+      const storageKey = `${userId}-CompletedAutomation-${keys[i]}`;
+      const savedData = secureStorage.getItem<boolean>(storageKey);
+      if(savedData){  setProjectObject(prev => ({ ...prev, [keys[i]]: savedData    }))  }
+      else{  setProjectObject(prev => ({  ...prev,  [keys[i]]: false })) }
+    }
+  }
+
+    // Initialize on component mount
+    useEffect(() => {
+      if (Cookies.get('userId')) {
+        const decryptedId = decryptData(Cookies.get('userId')!);
+        setUserId(decryptedId);
+        initializeProgressRecord(decryptedId);
+      } else {
+        router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+      }
+    },[]);
+
+    useEffect(() => {
+      const checkCompletion = async (decryptedId: string) => {
+        try {
+          const { data: fileOpsData, error } = await supabase
+            .from('automated_file_management')
+            .select('completed')
+            .eq('student_id', decryptedId)
+            .single();
+  
+          if (error) throw error;
+          
+          if (fileOpsData?.completed) {
+            setIsCompleted(true);
+            router.push(`/Module_1/Computer_Basics/Files_Module?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+          }
+        } catch (error) {
+          console.log('Error checking completion status:', error);
+        }
+      };
+  
+      if (userId) {
+        checkCompletion(userId);
+      }
+    }, [userId]);
+
+      // Decryption utility
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
+
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+
+      const { data: computerBasicsData, error:computerBasicsError  } = await supabase
+      .from('computer_basics')
+      .select('id')
+      .eq('student_id', studentId)
+      .single();
+
+      if (computerBasicsError || !computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Check for existing file_safety record
+      let { data: fileSafetyData, error:fileSafetyError  } = await supabase
+        .from('file_safety')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+
+      if (!fileSafetyData || fileSafetyError ) {
+        router.push(`/Module_1/Computer_Basics/Files_Module/File_Operations?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Check for existing file operations record
+      const { data: existingRecord, error:existingError } = await supabase
+        .from('automated_file_management')
+        .select('*')
+        .eq('file_safety_quest_id', fileSafetyData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      // if (existingError && existingError.code !== 'PGRST116') {
+      //   console.error('Error checking existing record:', existingError);
+      //   return;
+      // }
+
+      if (existingRecord) {
+        setProgressRecord(existingRecord);
+        console.log(progressRecord);
+        setIsCompleted(existingRecord.completed);
+      } else {
+        // Create new record if none exists
+        const { data: newRecord, error: insertError } = await supabase
+          .from('automated_file_management')
+          .insert([{
+            file_safety_quest_id: fileSafetyData?.id,
+            student_id: studentId,
+            react_completion: false,
+            flask_completion: false,
+            android_completion: false,
+            ai_completion: false,
+            node_completion: false,
+            vue_completion: false,
+            completed: false,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (newRecord) {
+          setProgressRecord(newRecord);
+          console.log(progressRecord);
+        }
+      }
+    } catch (error) {
+      console.log('Error in initializeProgressRecord:', error);
+    }
+  };
+ 
+
+  const finalSubmit=async()=>{
+    if (!progressRecord || !userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('automated_file_management')
+        .update({
+          react_completion: ProjectObject['React'],
+          flask_completion: ProjectObject['Flask'],
+          android_completion: ProjectObject['Android'],
+          ai_completion: ProjectObject['AI'],
+          node_completion: ProjectObject['Node'],
+          vue_completion: ProjectObject['Vue'],
+          completed: true,
+          completed_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        })
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      router.push(`/Module_1/Computer_Basics/Files_Module?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    } catch (error) {
+      console.log('Error submitting completion:', error);
+    }
+  }
+
+  const loadProjectStructure = React.useCallback((projectName: string, userId: string) => {
+    if (typeof window === 'undefined') return;
+    
+    const storageKey = `${userId}-terminal-project-${projectName}`;
+    try {
+      const savedData = secureStorage.getItem<{
+        items: FolderItem[];
+        currentPath: string[];
+        commandHistory: string[];
+      }>(storageKey);
+      
+      if (savedData) {
+        setItems(savedData.items);
+        setCurrentPath(savedData.currentPath);
+        setCommandHistory(savedData.commandHistory);
+        console.log(savedData.items);
+      } else {
+        // Reset state for new project
+        setItems([]);
+        setCurrentPath([]);
+        setCommandHistory([]);
+      }
+    } catch (error) {
+      console.error('Error loading project structure:', error);
+      handleCorruptedData(storageKey);
+    }
+  }, []);
+
+  const handleProjectSelect = (projectKey: string) => {
+    setSelectedProject(projectKey);
+    if (userId) {
+      loadProjectStructure(projectKey, userId);
+    }
+    console.log(ProjectObject);
+    setMode('create');
+  };
+
+  // Save project structure to storage
+  const saveProjectStructure = React.useCallback((
+    projectName: string, 
+    newItems: FolderItem[], 
+    newPath: string[], 
+    newHistory: string[],
+    userId: string
+  ) => {
+    if (typeof window === 'undefined') return;
+    
+    const storageKey = `${userId}-terminal-project-${projectName}`;
+    const dataToSave = {
+      items: newItems,
+      currentPath: newPath,
+      commandHistory: newHistory
+    };
+    secureStorage.setItem(storageKey, dataToSave);
+  }, []);
+
+  const handleCorruptedData = (storageKey: string) => {
+    secureStorage.removeItem(storageKey);
+    setItems([]);
+    setCurrentPath([]);
+    setCommandHistory([]);
+    alert('Project data was corrupted and has been reset. Please try again.');
+  };
+
+  useEffect(() => {
+    if (selectedProject && userId) {
+      loadProjectStructure(selectedProject, userId);
+    }
+    initialize_Completion();
+  }, [selectedProject, loadProjectStructure]);
 
   const executeCommand = (command: string) => {
     const parts = command.trim().split(' ');
@@ -241,65 +516,115 @@ const ProjectLearningInterface = () => {
 
     const getCurrentFullPath = () => '/' + currentPath.join('/');
 
+    let newItems = [...items];
+    let newPath = [...currentPath];
+    let newHistory = [...commandHistory, `$ ${command}`];
+
     switch (cmd) {
       case 'mkdir':
         if (args[0]) {
-          const newPath = getCurrentFullPath() + '/' + args[0];
-          setItems([...items, { path: newPath, type: 'folder' }]);
+          const newFilePath = getCurrentFullPath() + '/' + args[0];
+          const normalizedPath = newFilePath.replace(/^\/\//, '/');
+          newItems = [...newItems, { path: normalizedPath, type: 'folder' }];
           output = `Created directory: ${args[0]}`;
         } else {
           output = 'mkdir: missing operand';
         }
         break;
 
+
       case 'touch':
         if (args[0]) {
-          const newPath = getCurrentFullPath() + '/' + args[0];
-          setItems([...items, { path: newPath, type: 'file' }]);
-          output = `Created file: ${args[0]}`;
+          const newFilePath = getCurrentFullPath() + '/' + args[0];
+          const normalizedPath = newFilePath.replace(/^\/\//, '/');
+          newItems = [...newItems, { path: normalizedPath, type: 'file' }];
+          output = `Created directory: ${args[0]}`;
         } else {
-          output = 'touch: missing operand';
+          output = 'mkdir: missing operand';
         }
         break;
 
-      case 'cd':
-        if (args[0] === '..') {
-          if (currentPath.length > 0) {
-            setCurrentPath(prev => prev.slice(0, -1));
-            output = `Changed directory to: ${currentPath.slice(0, -1).join('/') || '/'}`;
+        case 'cd':
+          if (!args[0] || args[0] === '/') {
+            // cd with no args or / goes to root
+            newPath = [];
+            output = 'Changed to root directory';
+          } else if (args[0] === '..') {
+            // Go up one level
+            if (currentPath.length > 0) {
+              newPath = currentPath.slice(0, -1);
+              output = `Changed directory to: ${newPath.join('/') || '/'}`; 
+            } else {
+              output = 'Already at root directory';
+            }
+          } else {
+            // Check if the directory exists
+            const targetPath = getCurrentFullPath() + '/' + args[0];
+            const normalizedTargetPath = targetPath.replace(/^\/\//, '/');
+            
+            const dirExists = items.some(item => 
+              item.path === normalizedTargetPath && item.type === 'folder'
+            );
+  
+            if (dirExists) {
+              newPath = [...currentPath, args[0]];
+              output = `Changed directory to: ${newPath.join('/')}`;
+            } else {
+              output = `cd: ${args[0]}: No such directory`;
+              newPath = currentPath; // Keep current path unchanged
+            }
           }
-        } else if (args[0]) {
-          setCurrentPath(prev => [...prev, args[0]]);
-          output = `Changed directory to: ${[...currentPath, args[0]].join('/')}`;
-        }
-        break;
+          break;
 
-      case 'ls':
-        const currentFullPath = getCurrentFullPath();
-        const dirItems = items.filter(item => {
-          const itemDir = item.path.substring(0, item.path.lastIndexOf('/'));
-          return itemDir === currentFullPath;
-        });
-        output = dirItems.map(item => item.path.split('/').pop()).join('  ');
-        break;
+          case 'ls':
+            const currentFullPath = getCurrentFullPath();
+            const dirItems = items.filter(item => {
+              const itemParentPath = item.path.substring(0, item.path.lastIndexOf('/'));
+              const normalizedCurrentPath = currentFullPath === '' ? '/' : currentFullPath;
+              const normalizedParentPath = itemParentPath === '' ? '/' : itemParentPath;
+              return normalizedParentPath === normalizedCurrentPath;
+            });
+    
+            if (dirItems.length === 0) {
+              output = ''; // Empty directory
+            } else {
+              output = dirItems
+                .map(item => {
+                  const name = item.path.split('/').pop();
+                  return item.type === 'folder' ? `${name}/` : name;
+                })
+                .join('  ');
+            }
+            break;
 
       case 'pwd':
         output = getCurrentFullPath();
         break;
 
       case 'clear':
-        setCommandHistory([]);
-        return;
+        newHistory = [];
+        break;
 
       case 'validate':
         validateStructure();
-        return;
+        break;
 
       default:
         output = `Command not found: ${cmd}`;
     }
 
-    setCommandHistory(prev => [...prev, `$ ${command}`, output]);
+    if (output) {
+      newHistory = [...newHistory, output];
+    }
+
+    setItems(newItems);
+    setCurrentPath(newPath);
+    setCommandHistory(newHistory);
+
+    // Save after each command
+    if (selectedProject && userId) {
+      saveProjectStructure(selectedProject, newItems, newPath, newHistory, userId);
+    }
   };
 
   const validateStructure = () => {
@@ -308,19 +633,28 @@ const ProjectLearningInterface = () => {
     const errors: string[] = [];
     const template = projectTemplates[selectedProject].structure;
     
-    const validateRecursive = (structure: ProjectStructure[], basePath: string = '') => {
+    const validateRecursive = (structure: ProjectStructure[], currentPath: string = '') => {
       structure.forEach(required => {
-        const path = basePath + '/' + required.name;
+        // Construct the expected path for this item
+        const itemPath = currentPath ? `${currentPath}/${required.name}` : `/${required.name}`;
+        
         if (required.required) {
-          const exists = items.some(item => 
-            item.path === path && item.type === required.type
-          );
+          // Check if the item exists in our items array
+          const exists = items.some(item => {
+            // Normalize both paths for comparison
+            const normalizedItemPath = item.path.endsWith('/') ? item.path.slice(0, -1) : item.path;
+            const normalizedExpectedPath = itemPath.endsWith('/') ? itemPath.slice(0, -1) : itemPath;
+            return normalizedItemPath === normalizedExpectedPath && item.type === required.type;
+          });
+          
           if (!exists) {
-            errors.push(`Missing ${required.type}: ${path}`);
+            errors.push(`Missing ${required.type}: ${itemPath}`);
           }
         }
+        
+        // If this item has children, recursively validate them
         if (required.children) {
-          validateRecursive(required.children, path);
+          validateRecursive(required.children, itemPath);
         }
       });
     };
@@ -328,6 +662,12 @@ const ProjectLearningInterface = () => {
     validateRecursive(template);
     setValidationResults(errors);
     setShowValidationDialog(true);
+
+    // Update progress if validation is successful
+    if (errors.length === 0 && selectedProject && userId) {
+      const storageKey = `${userId}-CompletedAutomation-${selectedProject}`;
+      secureStorage.setItem(storageKey, true);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -338,20 +678,25 @@ const ProjectLearningInterface = () => {
     }
   };
 
+
   if (mode === 'select') {
     return (
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-6 tracking-tighter">Select a Project Structure to Learn</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
           {Object.entries(projectTemplates).map(([key, project]) => (
             <Card 
               key={key}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              className="cursor-pointer hover:shadow-lg transition-shadow p-4"
               onClick={() => {
-                setSelectedProject(key);
-                setMode('create');
+                handleProjectSelect(key);
               }}
             >
+              <div className="border p-4 rounded-md">
+                <span className="text-sm text-gray-500">
+                 {ProjectObject[key]?"Completed":"Waiting"}
+                </span>  
+               </div> 
               <CardHeader>
                 <div className={`w-12 h-12 rounded-lg ${project.color} mb-4 flex items-center justify-center`}>
                   {project.icon}
@@ -365,13 +710,28 @@ const ProjectLearningInterface = () => {
             </Card>
           ))}
         </div>
+        {Object.values(ProjectObject).some(Boolean) && (
+          <div className="mt-6 flex justify-end">
+            <Button className="gap-2" onClick={finalSubmit}>
+              Next
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Button variant="outline" onClick={() => {
+            setMode('select');
+            setItems([]);
+            setSelectedProject('');
+          }}>
+            Back to Projects
+          </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-5">
         <Card>
           <CardHeader>
             <CardTitle>Required Structure</CardTitle>
@@ -467,4 +827,17 @@ const ProjectLearningInterface = () => {
   );
 };
 
-export default ProjectLearningInterface;
+
+const AutomatedFileOperations = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <ProjectLearningInterface/>
+    </Suspense>
+  );
+};
+
+export default AutomatedFileOperations;

@@ -105,48 +105,11 @@ const Home = () => {
   }, []);
 
   // Independent module status tracking
-//   const fileManagementStatus = useModuleCompletion('file_management', userId);
+const fileManagementStatus = useModuleCompletion('file_management', userId);
 const fileOperationsStatus = useModuleCompletion('file_operations', userId);
-//   const automatedFileStatus = useModuleCompletion('automated_file', userId);
+const automatedFileStatus = useModuleCompletion('automated_file_management', userId);
 
   const generateTimelineData = () => [
-    {
-      title: "File Management",
-      content: (
-        <div className="p-6 bg-neutral-100 dark:bg-neutral-800 rounded-lg shadow-md">
-          <h2 className="text-3xl font-bold text-neutral-800 dark:text-neutral-200 mb-4 tracking-tight">
-            Introduction to File Management
-          </h2>
-          <p className="text-neutral-700 dark:text-neutral-300 mb-6">
-            File management is the process of organizing, storing, and maintaining digital files efficiently. 
-            Learn about file systems, directory structures, and best practices for organizing your digital workspace.
-          </p>
-          <div className="mt-6 flex gap-4">
-            <span className="rounded-full px-3 py-1 bg-emerald-400 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
-              File Systems
-            </span>
-            <span className="rounded-full px-3 py-1 bg-orange-300 hover:bg-indigo-100 focus:ring focus:ring-indigo-100 cursor-pointer">
-              Directory Structure
-            </span>
-            <span className="rounded-full px-3 py-1 bg-amber-300 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
-              Organization
-            </span>
-          </div>
-          <button 
-            // disabled={fileManagementStatus.completed || fileManagementStatus.loading}
-            // className={`rounded-full flex items-center gap-2 px-4 py-2 mt-5 ${
-            //   fileManagementStatus.completed || fileManagementStatus.loading
-            //     ? 'bg-gray-400 cursor-not-allowed' 
-            //     : 'bg-blue-500 hover:bg-blue-600'
-            // } text-white`}
-            onClick={() => router.push(`/Module_1/Computer_Basics/File_Management/Basic_Management?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
-          >
-            <FolderOpen /> 
-            {/* {fileManagementStatus.completed ? "Completed" : "File Management Journey"} */}
-          </button>
-        </div>
-      ),
-    },
     {
       title: "File Operations",
       content: (
@@ -177,10 +140,47 @@ const fileOperationsStatus = useModuleCompletion('file_operations', userId);
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-blue-500 hover:bg-blue-600'
             } text-white`}
-            onClick={() => router.push(`/Module_1/Computer_Basics/File_Management/Operations?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+            onClick={() => router.push(`/Module_1/Computer_Basics/Files_Module/File_Operations/?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
           >
             <FileText /> 
             {fileOperationsStatus.completed ? "Completed" : "File Operations Journey"}
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: "File Management",
+      content: (
+        <div className="p-6 bg-neutral-100 dark:bg-neutral-800 rounded-lg shadow-md">
+          <h2 className="text-3xl font-bold text-neutral-800 dark:text-neutral-200 mb-4 tracking-tight">
+            Introduction to File Management
+          </h2>
+          <p className="text-neutral-700 dark:text-neutral-300 mb-6">
+            File management is the process of organizing, storing, and maintaining digital files efficiently. 
+            Learn about file systems, directory structures, and best practices for organizing your digital workspace.
+          </p>
+          <div className="mt-6 flex gap-4">
+            <span className="rounded-full px-3 py-1 bg-emerald-400 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
+              File Systems
+            </span>
+            <span className="rounded-full px-3 py-1 bg-orange-300 hover:bg-indigo-100 focus:ring focus:ring-indigo-100 cursor-pointer">
+              Directory Structure
+            </span>
+            <span className="rounded-full px-3 py-1 bg-amber-300 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
+              Organization
+            </span>
+          </div>
+          <button 
+            disabled={fileManagementStatus.completed || fileManagementStatus.loading}
+            className={`rounded-full flex items-center gap-2 px-4 py-2 mt-5 ${
+              fileManagementStatus.completed || fileManagementStatus.loading
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-500 hover:bg-blue-600'
+            } text-white`}
+            onClick={() => router.push(`/Module_1/Computer_Basics/File_Management/Basic_Management?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+          >
+            <FolderOpen /> 
+            {fileManagementStatus.completed ? "Completed" : "File Management Journey"}
           </button>
         </div>
       ),
@@ -209,57 +209,19 @@ const fileOperationsStatus = useModuleCompletion('file_operations', userId);
             </span>
           </div>
           <button 
-            // disabled={automatedFileStatus.completed || automatedFileStatus.loading}
-            // className={`rounded-full flex items-center gap-2 px-4 py-2 mt-5 ${
-            //   automatedFileStatus.completed || automatedFileStatus.loading
-            //     ? 'bg-gray-400 cursor-not-allowed' 
-            //     : 'bg-blue-500 hover:bg-blue-600'
-            // } text-white`}
+            disabled={automatedFileStatus.completed || automatedFileStatus.loading}
+            className={`rounded-full flex items-center gap-2 px-4 py-2 mt-5 ${
+              automatedFileStatus.completed || automatedFileStatus.loading
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-500 hover:bg-blue-600'
+            } text-white`}
             onClick={() => router.push(`/Module_1/Computer_Basics/File_Management/Automation?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
           >
             <Settings /> 
-            {/* {automatedFileStatus.completed ? "Completed" : "Automation Journey"} */}
+            {automatedFileStatus.completed ? "Completed" : "Automation Journey"}
           </button>
         </div>
-      ),
-    },
-     {
-      title: "Automated File Operations",
-      content: (
-        <div className="p-6 bg-neutral-100 dark:bg-neutral-800 rounded-lg shadow-md">
-          <h2 className="text-3xl font-bold text-neutral-800 dark:text-neutral-200 mb-4 tracking-tight">
-            Introduction to Automated File Operations
-          </h2>
-          <p className="text-neutral-700 dark:text-neutral-300 mb-6">
-            Learn to automate file Operations tasks using scripts and tools. Explore file organization
-            automation, batch processing, and scheduled file operations to improve workflow efficiency
-            and maintain organized file systems automatically.
-          </p>
-          <div className="mt-6 flex gap-4">
-            <span className="rounded-full px-3 py-1 bg-emerald-400 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
-              Automation Scripts
-            </span>
-            <span className="rounded-full px-3 py-1 bg-orange-300 hover:bg-indigo-100 focus:ring focus:ring-indigo-100 cursor-pointer">
-              Batch Processing
-            </span>
-            <span className="rounded-full px-3 py-1 bg-amber-300 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
-              Scheduled Tasks
-            </span>
-          </div>
-          <button 
-            // disabled={automatedFileStatus.completed || automatedFileStatus.loading}
-            // className={`rounded-full flex items-center gap-2 px-4 py-2 mt-5 ${
-            //   automatedFileStatus.completed || automatedFileStatus.loading
-            //     ? 'bg-gray-400 cursor-not-allowed' 
-            //     : 'bg-blue-500 hover:bg-blue-600'
-            // } text-white`}
-            onClick={() => router.push(`/Module_1/Computer_Basics/File_Management/Automation?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
-          >
-            <Settings /> 
-            {/* {automatedFileStatus.completed ? "Completed" : "Automation Journey"} */}
-          </button>
-        </div>
-      ),
+      )
     }
   ];
 

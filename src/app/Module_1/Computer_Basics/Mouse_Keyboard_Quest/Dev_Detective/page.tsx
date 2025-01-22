@@ -31,6 +31,11 @@ type DevDetectiveRecord = {
   completed_at: string | null;
 };
 
+interface KeyboardQuest {
+  id: number;  // or string, depending on your id type
+  completed: boolean;
+}
+
 type Operation = '+' | '-' | '*' | '/';
 
 const MathDetectiveContent = () => {
@@ -156,6 +161,24 @@ const MathDetectiveContent = () => {
         router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         return;
       }
+
+      const { data: keyboardData, error: keyboardError } = await supabase
+      .from('keyboard')
+      .select('id')
+      .eq('computer_basics_id', computerBasicsData.id)
+      .eq('student_id', decryptedId)
+      .single<KeyboardQuest>();
+
+    if (keyboardError || !keyboardData) {
+      router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+      return;
+    }
+    else{
+      if(!keyboardData.completed){
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+    }
 
       // Check for existing incomplete record
       const { data: existingRecord, error: existingError } = await supabase

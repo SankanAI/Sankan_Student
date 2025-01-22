@@ -28,6 +28,11 @@ type FileOperationsRecord = {
   last_activity: string;
 };
 
+interface MouseKeyboardQuest {
+  id: number;  // or string, depending on your id type
+  completed: boolean;
+}
+
 
 const InteractiveFileTasks = () => {
   // Task and progress management
@@ -212,6 +217,23 @@ useEffect(() => {
         return;
       }
 
+      const { data: mouseKeyboardData, error: mouseKeyboardError  } = await supabase
+      .from('mouse_keyboard_quest')
+      .select('id')
+      .eq('student_id', studentId)
+      .single<MouseKeyboardQuest>();
+
+      if (mouseKeyboardError || !mouseKeyboardData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+      else{
+        if (!mouseKeyboardData?.completed) {
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+          return;
+        }
+      }
+
       // Check for existing file_safety record
       let { data: fileSafetyData } = await supabase
         .from('file_safety')
@@ -331,7 +353,7 @@ useEffect(() => {
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     }
-  }, [sorting, copying, Append]);
+  },[]);
 
   // Check completion status
   useEffect(() => {
@@ -357,7 +379,7 @@ useEffect(() => {
     if (userId) {
       checkCompletion(userId);
     }
-  }, [userId]);
+  },  [sorting, copying, Append, userId]);
 
   return (
     <div className="p-6 space-y-6">

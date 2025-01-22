@@ -168,6 +168,11 @@ const LEVELS: GameLevel[] = [
   }
 ];
 
+interface MouseQuest {
+  id: number;  // or string, depending on your id type
+  completed: boolean;
+}
+
 type KeyboardRecord = {
   keyboard_id: string;
   mouse_keyboard_quest_id: string;
@@ -262,6 +267,24 @@ function TypingTriumpContent() {
       }
   
       // Check for existing mouse_keyboard_quest record
+      const { data: mouse_movementData, error: mouse_movementError } = await supabase
+        .from('mouse_movement')
+        .select('id')
+        .eq('computer_basics_id', computerBasicsData.id)
+        .eq('student_id', studentId)
+        .single<MouseQuest>();
+  
+      if (mouse_movementError || !mouse_movementData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+      else{
+        if(!mouse_movementData.completed){
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+          return;
+        }
+      }
+
       const { data: questData, error: questError } = await supabase
         .from('mouse_keyboard_quest')
         .select('id')
@@ -269,24 +292,13 @@ function TypingTriumpContent() {
         .eq('student_id', studentId)
         .single();
   
-      if (questError || !questData) {
-        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        return;
-      }
-  
       // Check for existing keyboard record
       const { data: existingRecord, error: existingError } = await supabase
         .from('keyboard')
         .select('*')
-        .eq('mouse_keyboard_quest_id', questData.id)
+        .eq('mouse_keyboard_quest_id', questData?.id)
         .eq('student_id', studentId)
         .single();
-  
-      if (existingError && existingError.code !== 'PGRST116') {
-        // Handle unexpected errors
-        console.error('Error checking existing record:', existingError);
-        return;
-      }
   
       if (existingRecord) {
         // If record exists, just update the state
@@ -296,7 +308,7 @@ function TypingTriumpContent() {
         const { data: newRecord, error: insertError } = await supabase
           .from('keyboard')
           .insert([{
-            mouse_keyboard_quest_id: questData.id,
+            mouse_keyboard_quest_id: questData?.id,
             student_id: studentId,
             level1_score: null,
             level1_time: null,
@@ -354,7 +366,7 @@ function TypingTriumpContent() {
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
     }
-  },[userId, currentLevel])
+  },[userId])
 
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
@@ -374,7 +386,7 @@ function TypingTriumpContent() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, currentLevel]);
 
 
   const finalSubmit=async(timing:number, scored:number)=>{
