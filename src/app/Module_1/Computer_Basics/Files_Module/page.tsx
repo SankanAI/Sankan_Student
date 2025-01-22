@@ -140,7 +140,7 @@ const automatedFileStatus = useModuleCompletion('automated_file_management', use
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-blue-500 hover:bg-blue-600'
             } text-white`}
-            onClick={() => router.push(`/Module_1/Computer_Basics/Files_Module/File_Operations/?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+            onClick={() => router.push(`/Module_1/Computer_Basics/Files_Module/File_Operations?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
           >
             <FileText /> 
             {fileOperationsStatus.completed ? "Completed" : "File Operations Journey"}
@@ -165,7 +165,7 @@ const automatedFileStatus = useModuleCompletion('automated_file_management', use
             </span>
             <span className="rounded-full px-3 py-1 bg-orange-300 hover:bg-indigo-100 focus:ring focus:ring-indigo-100 cursor-pointer">
               Directory Structure
-            </span>
+            </span> 
             <span className="rounded-full px-3 py-1 bg-amber-300 hover:bg-yellow-600 focus:ring focus:ring-yellow-300 cursor-pointer">
               Organization
             </span>
@@ -177,7 +177,7 @@ const automatedFileStatus = useModuleCompletion('automated_file_management', use
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-blue-500 hover:bg-blue-600'
             } text-white`}
-            onClick={() => router.push(`/Module_1/Computer_Basics/File_Management/Basic_Management?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
+            onClick={() => router.push(`/Module_1/Computer_Basics/Files_Module/File_Management?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)}
           >
             <FolderOpen /> 
             {fileManagementStatus.completed ? "Completed" : "File Management Journey"}

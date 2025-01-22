@@ -31,10 +31,6 @@ type DevDetectiveRecord = {
   completed_at: string | null;
 };
 
-interface KeyboardQuest {
-  id: number;  // or string, depending on your id type
-  completed: boolean;
-}
 
 type Operation = '+' | '-' | '*' | '/';
 
@@ -60,6 +56,7 @@ const MathDetectiveContent = () => {
   const [userId, setUserId] = useState('');
   const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isDevCompleted, setIsDevCompleted] = useState(false);
 
   // Refs
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -121,7 +118,7 @@ const MathDetectiveContent = () => {
         window.speechSynthesis.cancel();
       }
     };
-  }, [processVoiceCommand]);
+  }, []);
 
   const initializeUser =async (decryptedId: string) => {
     try {
@@ -162,24 +159,6 @@ const MathDetectiveContent = () => {
         return;
       }
 
-      const { data: keyboardData, error: keyboardError } = await supabase
-      .from('keyboard')
-      .select('id')
-      .eq('computer_basics_id', computerBasicsData.id)
-      .eq('student_id', decryptedId)
-      .single<KeyboardQuest>();
-
-    if (keyboardError || !keyboardData) {
-      router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-      return;
-    }
-    else{
-      if(!keyboardData.completed){
-        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Keyboard?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        return;
-      }
-    }
-
       // Check for existing incomplete record
       const { data: existingRecord, error: existingError } = await supabase
         .from('dev_detective')
@@ -190,11 +169,8 @@ const MathDetectiveContent = () => {
 
       if (existingRecord) {
         setProgressRecord(existingRecord);
-        return;
       }
-
-      // Only create new record if no record exists
-      if (existingError && existingError.code === 'PGRST116') {
+      else {
         const { data: newRecord, error: insertError } = await supabase
           .from('dev_detective')
           .insert([{
@@ -223,21 +199,43 @@ const MathDetectiveContent = () => {
       }
     } catch (error) {
       console.error('Error in initialization:', error);
-    } finally {
-      setIsInitialized(true);
-    }
+    } 
+    
   };
 
   useEffect(() => {
-    const userIdCookie = Cookies.get('userId');
-    if (userIdCookie && !isInitialized) {
-      const decryptedId = decryptData(userIdCookie);
+
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: KeyboardMovementData, error } = await supabase
+          .from('dev_detective')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (KeyboardMovementData?.completed) {
+          setIsDevCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
       setUserId(decryptedId);
-      initializeUser(decryptedId);
-    } else if (!userIdCookie) {
-      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+      checkCompletion(decryptedId);
+      if (!isDevCompleted) {
+        initializeUser(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
     }
-  }, [principalId, schoolId, teacherId, isInitialized, initializeUser, decryptData, router]);
+  }, []);
 
   const updateProgress = async () => {
     if (!progressRecord || !userId) return;

@@ -53,7 +53,7 @@ const InteractiveFileTasks = () => {
   const [sortType, setSortType] = useState('numeric');
   const [sortError, setSortError] = useState('');
   const [showValidateButton, setShowValidateButton] = useState(true);
-  const [isClient, setIsClient] = useState(false);
+  // const [isClient, setIsClient] = useState(false);
   const [sorting, setSorting]=useState<boolean>(false);
   const [copying, setCopying]=useState<boolean>(false);
   const [Append, setAppend]=useState<boolean>(false);
@@ -72,9 +72,6 @@ const InteractiveFileTasks = () => {
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
 
-useEffect(() => {
-  setIsClient(true);
-}, []);
 
   // File content task state
   const [sourceContent, setSourceContent] = useState('');
@@ -217,23 +214,6 @@ useEffect(() => {
         return;
       }
 
-      const { data: mouseKeyboardData, error: mouseKeyboardError  } = await supabase
-      .from('mouse_keyboard_quest')
-      .select('id')
-      .eq('student_id', studentId)
-      .single<MouseKeyboardQuest>();
-
-      if (mouseKeyboardError || !mouseKeyboardData) {
-        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        return;
-      }
-      else{
-        if (!mouseKeyboardData?.completed) {
-          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-          return;
-        }
-      }
-
       // Check for existing file_safety record
       let { data: fileSafetyData } = await supabase
         .from('file_safety')
@@ -272,7 +252,6 @@ useEffect(() => {
 
       if (existingRecord) {
         setProgressRecord(existingRecord);
-        setIsCompleted(existingRecord.completed);
       } else {
         // Create new record if none exists
         const { data: newRecord, error: insertError } = await supabase
@@ -344,17 +323,6 @@ useEffect(() => {
     }
   };
 
-  // Initialize on component mount
-  useEffect(() => {
-    if (Cookies.get('userId')) {
-      const decryptedId = decryptData(Cookies.get('userId')!);
-      setUserId(decryptedId);
-      initializeProgressRecord(decryptedId);
-    } else {
-      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-    }
-  },[]);
-
   // Check completion status
   useEffect(() => {
     const checkCompletion = async (decryptedId: string) => {
@@ -376,16 +344,21 @@ useEffect(() => {
       }
     };
 
-    if (userId) {
-      checkCompletion(userId);
+    if (Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      setUserId(decryptedId);
+      checkCompletion(decryptedId);
+      if(!isCompleted){initializeProgressRecord(decryptedId);}
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     }
-  },  [sorting, copying, Append, userId]);
+  },  []);
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tighter">File Management Tutorial</h1>
-        {isClient && <TeacherGuide context='Hello world' pageId='hello'/>}
+        {/* {isClient && <TeacherGuide context='Hello world' pageId='hello'/>} */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Progress:</span>
           <div className="flex gap-1">

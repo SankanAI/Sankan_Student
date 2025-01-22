@@ -265,25 +265,6 @@ function TypingTriumpContent() {
         router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
         return;
       }
-  
-      // Check for existing mouse_keyboard_quest record
-      const { data: mouse_movementData, error: mouse_movementError } = await supabase
-        .from('mouse_movement')
-        .select('id')
-        .eq('computer_basics_id', computerBasicsData.id)
-        .eq('student_id', studentId)
-        .single<MouseQuest>();
-  
-      if (mouse_movementError || !mouse_movementData) {
-        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        return;
-      }
-      else{
-        if(!mouse_movementData.completed){
-          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-          return;
-        }
-      }
 
       const { data: questData } = await supabase
         .from('mouse_keyboard_quest')

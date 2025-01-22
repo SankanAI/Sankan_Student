@@ -311,16 +311,11 @@ const ProjectLearningInterface = () => {
       }
 
       // Check for existing file_safety record
-      const { data: fileSafetyData, error:fileSafetyError  } = await supabase
+      const { data: fileSafetyData } = await supabase
         .from('file_safety')
         .select('id')
         .eq('student_id', studentId)
         .single();
-
-      if (!fileSafetyData || fileSafetyError ) {
-        router.push(`/Module_1/Computer_Basics/Files_Module/File_Operations?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-        return;
-      }
 
       // Check for existing file operations record
       const { data: existingRecord } = await supabase
@@ -363,18 +358,6 @@ const ProjectLearningInterface = () => {
       console.log('Error in initializeProgressRecord:', error);
     }
   };
-
-  useEffect(() => {
-    if (Cookies.get('userId')) {
-      const decryptedId = decryptData(Cookies.get('userId')!);
-      setUserId(decryptedId);
-      initializeProgressRecord(decryptedId);
-    } else {
-      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
-    }
-  }, []);
-
-
 
   // Handle final submission
   const handleSubmit = async () => {
@@ -424,10 +407,21 @@ const ProjectLearningInterface = () => {
       }
     };
 
-    if (userId) {
-      checkCompletion(userId);
+   if (Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      setUserId(decryptedId);
+      loadAllProjectProgress(userId);
+      checkCompletion(decryptedId);
+      if (selectedProject && userId) {
+        loadProjectStructure(selectedProject, userId);
+      }
+      if(!isCompleted){
+        initializeProgressRecord(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     }
-  }, [userId]);
+  }, []);
 
   const calculateProgress = (projectKey: string, currentItems: FolderItem[]) => {
     const template = projectTemplates[projectKey].structure;
@@ -534,17 +528,6 @@ const ProjectLearningInterface = () => {
     
     setShowValidationDialog(true);
   };
-
-  React.useEffect(() => {
-    if (selectedProject) {
-      const progress = calculateProgress(selectedProject, items);
-      setProjectProgress(prev => ({
-        ...prev,
-        [selectedProject]: progress
-      }));
-    }
-  }, [items, selectedProject]);
-
   
 
   const loadProjectStructure = useCallback((projectName: string, userId: string) => {
@@ -719,20 +702,6 @@ const ProjectLearningInterface = () => {
     }
     setMode('create');
   };
-
-  // Load all project progress when component mounts
-  useEffect(() => {
-    if (userId) {
-      loadAllProjectProgress(userId);
-    }
-  }, [userId, loadAllProjectProgress]);
-
-  // Load project structure when switching projects
-  useEffect(() => {
-    if (selectedProject && userId) {
-      loadProjectStructure(selectedProject, userId);
-    }
-  }, [selectedProject, userId, loadProjectStructure]);
 
   if (mode === 'select') {
     return (
