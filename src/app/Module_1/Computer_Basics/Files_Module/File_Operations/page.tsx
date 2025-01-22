@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, Plus, Trophy, Hash, ArrowRight } from 'lucide-react';
-import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
+// import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
@@ -28,10 +28,10 @@ type FileOperationsRecord = {
   last_activity: string;
 };
 
-interface MouseKeyboardQuest {
-  id: number;  // or string, depending on your id type
-  completed: boolean;
-}
+// interface MouseKeyboardQuest {
+//   id: number;  // or string, depending on your id type
+//   completed: boolean;
+// }
 
 
 const InteractiveFileTasks = () => {

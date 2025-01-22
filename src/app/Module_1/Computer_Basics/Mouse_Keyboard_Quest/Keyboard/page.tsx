@@ -168,10 +168,10 @@ const LEVELS: GameLevel[] = [
   }
 ];
 
-interface MouseQuest {
-  id: number;  // or string, depending on your id type
-  completed: boolean;
-}
+// interface MouseQuest {
+//   id: number;  // or string, depending on your id type
+//   completed: boolean;
+// }
 
 type KeyboardRecord = {
   keyboard_id: string;

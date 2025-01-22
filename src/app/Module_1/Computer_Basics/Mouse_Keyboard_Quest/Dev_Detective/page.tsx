@@ -55,7 +55,6 @@ const MathDetectiveContent = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [userId, setUserId] = useState('');
   const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isDevCompleted, setIsDevCompleted] = useState(false);
 
   // Refs
@@ -85,30 +84,30 @@ const MathDetectiveContent = () => {
   }, []);
 
   // Voice command processing
-  const processVoiceCommand = useCallback((command: string) => {
-    const numbers = command.match(/\d+/g);
-    if (numbers && numbers.length >= 2) {
-      setFirstNumber(numbers[0]);
-      setSecondNumber(numbers[1]);
-      speak(`Setting numbers to ${numbers[0]} and ${numbers[1]}`);
-    }
-    if (command.includes('plus') || command.includes('add')) {
-      setOperation('+');
-      speak('Setting operation to addition');
-    }
-    if (command.includes('minus') || command.includes('subtract')) {
-      setOperation('-');
-      speak('Setting operation to subtraction');
-    }
-    if (command.includes('multiply') || command.includes('times')) {
-      setOperation('*');
-      speak('Setting operation to multiplication');
-    }
-    if (command.includes('divide')) {
-      setOperation('/');
-      speak('Setting operation to division');
-    }
-  }, [speak]);
+  // const processVoiceCommand = useCallback((command: string) => {
+  //   const numbers = command.match(/\d+/g);
+  //   if (numbers && numbers.length >= 2) {
+  //     setFirstNumber(numbers[0]);
+  //     setSecondNumber(numbers[1]);
+  //     speak(`Setting numbers to ${numbers[0]} and ${numbers[1]}`);
+  //   }
+  //   if (command.includes('plus') || command.includes('add')) {
+  //     setOperation('+');
+  //     speak('Setting operation to addition');
+  //   }
+  //   if (command.includes('minus') || command.includes('subtract')) {
+  //     setOperation('-');
+  //     speak('Setting operation to subtraction');
+  //   }
+  //   if (command.includes('multiply') || command.includes('times')) {
+  //     setOperation('*');
+  //     speak('Setting operation to multiplication');
+  //   }
+  //   if (command.includes('divide')) {
+  //     setOperation('/');
+  //     speak('Setting operation to division');
+  //   }
+  // }, [speak]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -160,7 +159,7 @@ const MathDetectiveContent = () => {
       }
 
       // Check for existing incomplete record
-      const { data: existingRecord, error: existingError } = await supabase
+      const { data: existingRecord} = await supabase
         .from('dev_detective')
         .select('*')
         .eq('mouse_keyboard_quest_id', questData.id)
