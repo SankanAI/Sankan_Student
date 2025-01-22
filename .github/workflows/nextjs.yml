@@ -79,6 +79,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_SECRET_KEY: ${{ secrets.NEXT_PUBLIC_SECRET_KEY }}
+          NEXT_PUBLIC_STORAGE_KEY: ${{ secrets.NEXT_PUBLIC_STORAGE_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
