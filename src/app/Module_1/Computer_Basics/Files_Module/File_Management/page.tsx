@@ -311,7 +311,7 @@ const ProjectLearningInterface = () => {
       }
 
       // Check for existing file_safety record
-      let { data: fileSafetyData, error:fileSafetyError  } = await supabase
+      const { data: fileSafetyData, error:fileSafetyError  } = await supabase
         .from('file_safety')
         .select('id')
         .eq('student_id', studentId)
@@ -579,7 +579,7 @@ const ProjectLearningInterface = () => {
   const saveProjectStructure = useCallback((projectName: string, newItems: FolderItem[], userId: string) => {
     if (typeof window !== 'undefined') {
       const storageKey = `${userId}-project-${projectName}`;
-      secureStorage.setItem(storageKey, newItems);
+      secureStorage.setItem<FolderItem[]>(storageKey, newItems);
     }
   }, []);
 

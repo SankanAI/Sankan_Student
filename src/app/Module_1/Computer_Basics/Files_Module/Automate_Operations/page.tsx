@@ -55,6 +55,13 @@ type FileManagement = {
   last_activity: string;  // ISO timestamp
 };
 
+
+interface DataSave {
+    items: FolderItem[];
+    currentPath: string[];
+    commandHistory: string[];
+};
+
 interface ProjectTemplate {
   name: string;
   description: string;
@@ -349,7 +356,7 @@ const ProjectLearningInterface = () => {
       }
 
       // Check for existing file_safety record
-      let { data: fileSafetyData, error:fileSafetyError  } = await supabase
+      const { data: fileSafetyData, error:fileSafetyError  } = await supabase
         .from('file_safety')
         .select('id')
         .eq('student_id', studentId)
@@ -361,7 +368,7 @@ const ProjectLearningInterface = () => {
       }
 
       // Check for existing file operations record
-      const { data: existingRecord, error:existingError } = await supabase
+      const { data: existingRecord } = await supabase
         .from('automated_file_management')
         .select('*')
         .eq('file_safety_quest_id', fileSafetyData?.id)
@@ -490,7 +497,7 @@ const ProjectLearningInterface = () => {
       currentPath: newPath,
       commandHistory: newHistory
     };
-    secureStorage.setItem(storageKey, dataToSave);
+    secureStorage.setItem<DataSave>(storageKey, dataToSave);
   }, []);
 
   const handleCorruptedData = (storageKey: string) => {
@@ -666,7 +673,7 @@ const ProjectLearningInterface = () => {
     // Update progress if validation is successful
     if (errors.length === 0 && selectedProject && userId) {
       const storageKey = `${userId}-CompletedAutomation-${selectedProject}`;
-      secureStorage.setItem(storageKey, true);
+      secureStorage.setItem<boolean>(storageKey, true);
     }
   };
 

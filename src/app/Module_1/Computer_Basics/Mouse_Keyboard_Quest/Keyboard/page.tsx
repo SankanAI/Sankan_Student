@@ -285,7 +285,7 @@ function TypingTriumpContent() {
         }
       }
 
-      const { data: questData, error: questError } = await supabase
+      const { data: questData } = await supabase
         .from('mouse_keyboard_quest')
         .select('id')
         .eq('computer_basics_id', computerBasicsData.id)
@@ -293,7 +293,7 @@ function TypingTriumpContent() {
         .single();
   
       // Check for existing keyboard record
-      const { data: existingRecord, error: existingError } = await supabase
+      const { data: existingRecord } = await supabase
         .from('keyboard')
         .select('*')
         .eq('mouse_keyboard_quest_id', questData?.id)

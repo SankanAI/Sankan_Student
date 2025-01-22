@@ -35,7 +35,7 @@ class SecureStorage {
 
 
   // Encrypt data before storing
-  setItem(key: string, data: any): void {
+  setItem<T>(key: string, data: T | null): void {
     try {
       // Convert data to string if it's an object
       const stringData = JSON.stringify(data);
@@ -68,7 +68,7 @@ class SecureStorage {
       if (!secureData) return null;
       
       // Parse the secure data container
-      const { data: encryptedData, checksum, timestamp } = JSON.parse(secureData);
+      const { data: encryptedData, checksum} = JSON.parse(secureData);
       
       // Decrypt the data
       const bytes = CryptoJS.AES.decrypt(encryptedData, this.SECRET_KEY);
