@@ -383,7 +383,7 @@ const ProjectLearningInterface = () => {
 
       router.push(`/Module_1/Computer_Basics/Files_Module?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     } catch (error) {
-      console.error('Error submitting completion:', error);
+      // console.error('Error submitting completion:', error);
     }
   };
 
@@ -554,7 +554,7 @@ const ProjectLearningInterface = () => {
         setItems([]);
       }
     } catch (error) {
-      console.error('Error loading project structure:', error);
+      console.log('Error loading project structure:', error);
       handleCorruptedData(storageKey);
     }
   }, []);

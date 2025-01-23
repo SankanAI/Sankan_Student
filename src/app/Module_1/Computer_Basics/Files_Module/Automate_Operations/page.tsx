@@ -467,7 +467,7 @@ const ProjectLearningInterface = () => {
         setCommandHistory([]);
       }
     } catch (error) {
-      console.error('Error loading project structure:', error);
+      console.log('Error loading project structure:', error);
       handleCorruptedData(storageKey);
     }
   }, []);

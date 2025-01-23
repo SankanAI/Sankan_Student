@@ -312,7 +312,7 @@ function TypingTriumpContent() {
         }
       }
     } catch (error) {
-      console.error('Error in initializeProgressRecord:', error);
+      console.log('Error in initializeProgressRecord:', error);
       // Handle error appropriately - maybe show an error message to the user
     }
   };

@@ -188,7 +188,7 @@ const MathDetectiveContent = () => {
           .single();
 
         if (insertError) {
-          console.error('Error creating new record:', insertError);
+          console.log('Error creating new record:', insertError);
           return;
         }
 
@@ -197,7 +197,7 @@ const MathDetectiveContent = () => {
         }
       }
     } catch (error) {
-      console.error('Error in initialization:', error);
+      console.log('Error in initialization:', error);
     } 
     
   };
@@ -225,7 +225,6 @@ const MathDetectiveContent = () => {
 
     if(Cookies.get('userId')) {
       const decryptedId = decryptData(Cookies.get('userId')!);
-      console.log("Decrypted userId:", decryptedId);
       setUserId(decryptedId);
       checkCompletion(decryptedId);
       if (!isDevCompleted) {
@@ -284,7 +283,7 @@ const MathDetectiveContent = () => {
 
       router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.log('Error updating progress:', error);
     }
   };
 
