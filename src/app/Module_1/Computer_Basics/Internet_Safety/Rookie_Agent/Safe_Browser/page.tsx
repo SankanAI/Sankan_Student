@@ -1,5 +1,5 @@
 "use client";
-import React, { useState} from 'react';
+import React, { useState, useEffect, Suspense} from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,16 @@ const SafeBrowserSimulator: React.FC = () => {
   });
   const [showSecurityAlert, setShowSecurityAlert] = useState<boolean>(false);
   const [securityMessage, setSecurityMessage] = useState<string>('');
-  // const [activeTab, setActiveTab] = useState<string>('browser');
+  const [countSite, setCountSite]=useState<number>(0);
+  const [normalSite, setnormalSite] = useState<boolean>(false);
+  const [phishing, setPhishing] = useState<boolean>(false);
+  const [otpVerification, setOtpVerification] = useState<boolean>(false);
+  const [downloadWarning, setDownloadWarning] = useState<boolean>(false);
+  const [socialClone, setSocialClone] = useState<boolean>(false);
+  const [cryptoScam, setCryptoScam] = useState<boolean>(false);
+  const [publicWifiRisk, setPublicWifiRisk] = useState<boolean>(false);
+  const [dataCollectionWarning, setDataCollectionWarning] = useState<boolean>(false);
+  const [adwarePopup, setAdwarePopup] = useState<boolean>(false);
 
   // Sample websites database
   const websites: Website[] = [
@@ -210,6 +219,19 @@ const SafeBrowserSimulator: React.FC = () => {
     }
   };
 
+  const URLTrigger = (move: string) => {
+    const totalSites = websites.length;
+    
+    // Implement navigation logic
+    if (move === "Back") {
+      // Move to previous site, wrap around if at the beginning
+      setCountSite(prev => (prev > 0 ? prev - 1 : totalSites - 1));
+    } else if (move === "Next") {
+      // Move to next site, wrap around if at the end
+      setCountSite(prev => (prev < totalSites - 1 ? prev + 1 : 0));
+    }
+  };
+
   const visitWebsite = (site: Website) => {
     setCurrentUrl(site.url);
     setPlayerStats(prev => ({
@@ -247,6 +269,10 @@ const SafeBrowserSimulator: React.FC = () => {
     }
   };
 
+  useEffect(()=>{
+    setCurrentUrl(websites[countSite].url);
+  },[countSite])
+
   return (
     <div className="w-full max-w-6xl mx-auto p-4 flex gap-4">
       <Card className="border-2 flex-[0.75]">
@@ -273,10 +299,10 @@ const SafeBrowserSimulator: React.FC = () => {
             <TabsContent value="browser" className="space-y-4">
               {/* Browser Controls */}
               <div className="flex items-center space-x-2 border-b pb-2">
-                <Button variant="outline" size="icon">
-                  <ChevronLeft className="h-4 w-4" />
+                <Button variant="outline" size="icon"  onClick={()=>{URLTrigger("Back")}} >
+                  <ChevronLeft className="h-4 w-4"/>
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon"  onClick={()=>{URLTrigger("Next")}} >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="icon">
@@ -396,4 +422,18 @@ const SafeBrowserSimulator: React.FC = () => {
   );
 };
 
-export default SafeBrowserSimulator;
+
+const SafeBrowserSimulatorApp = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <SafeBrowserSimulator />
+    </Suspense>
+  );
+};
+
+
+export default SafeBrowserSimulatorApp;

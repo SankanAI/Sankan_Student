@@ -1,17 +1,41 @@
 "use client";
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sword, Shield, Scroll, Cpu, Brain, Server, Rocket } from "lucide-react";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Cookies from "js-cookie";
 
 interface Requirement {
   id: "length" | "uppercase" | "lowercase" | "number" | "special";
   label: string;
   met: boolean;
 }
+
+// -- password Table
+// CREATE TABLE password (
+//     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+//     rookie_agent_id UUID REFERENCES rookie_agent(id),
+//     student_id UUID NOT NULL UNIQUE,
+//     completed BOOLEAN DEFAULT false,
+//     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+//     completed_at TIMESTAMP WITH TIME ZONE,
+//     last_activity TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+// );
+
+type PasswordRecord = {
+  id: string;
+  rookie_agent_id: string;
+  student_id: string;
+  completed: boolean;
+  started_at: string;
+  completed_at: string | null;
+  last_activity: string;
+};
 
 interface CrackTimes {
   human: string;
@@ -53,6 +77,179 @@ const PasswordSamurai: React.FC = () => {
     quantum: "",
   });
   const [checklist, setChecklist] = useState<Requirement[]>(INITIAL_REQUIREMENTS);
+  const router = useRouter();
+  const params = useSearchParams();
+  const [IsPasswordCompleted,setIsPasswordCompleted]=useState<boolean>(false);
+  const [progressRecord, setProgressRecord] = useState<PasswordRecord | null>(null);
+  const supabase = createClientComponentClient();
+  const [userId, setUserId] = useState<string>('');
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+
+
+  const decryptData = (encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+      // Check for existing computer_basics record
+      let { data: computerBasicsData } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+  
+      // Create computer_basics record if it doesn't exist
+      if (!computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+  
+      // Check for existing internet_safety record
+      let { data: internetSafetyData } = await supabase
+        .from('internet_safety')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+  
+      if (!internetSafetyData) {
+        const { data: newInternetSafety, error: InternetSafetyError } = await supabase
+        .from('internet_safety')
+        .insert([{
+          computer_basics_id: computerBasicsData.id,
+          student_id: studentId,
+          started_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (InternetSafetyError) throw InternetSafetyError;
+      internetSafetyData =  newInternetSafety;
+      }
+  
+      // Initialize or check existing rookie_agent record
+      let { data: rookieAgentData } = await supabase
+        .from('rookie_agent')
+        .select('*')
+        .eq('student_id', studentId)
+        .single();
+  
+      if (!rookieAgentData) {
+        const { data: newRookieAgent, error: rookieAgentError } = await supabase
+          .from('rookie_agent')
+          .insert([{
+            internet_safety_id: internetSafetyData?.id,
+            student_id: studentId,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+  
+        if (rookieAgentError) throw rookieAgentError;
+        rookieAgentData = newRookieAgent;
+      }
+  
+      // Check or initialize password record
+      let { data: passwordData } = await supabase
+        .from('password')
+        .select('*')
+        .eq('student_id', studentId)
+        .single();
+
+      if(passwordData){
+        setProgressRecord(passwordData);
+      }
+      else {
+        const { data: newPassword, error: passwordError } = await supabase
+          .from('password')
+          .insert([{
+            rookie_agent_id: rookieAgentData.id,
+            student_id: studentId,
+            completed: false,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+  6
+        if (passwordError) throw passwordError;
+        if(newPassword){
+          setProgressRecord(newPassword);
+        }
+      }
+    } catch (error) {
+      console.log('Error initializing progress record:', error);
+    }
+  };
+
+  // Update progress in database
+  const updateProgress = async () => {
+    if (!progressRecord || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('password')
+        .update({
+          completed: true,
+          last_activity: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      setIsPasswordCompleted(true);
+      router.push(`/Module_1/Computer_Basics/Internet_Safety/Rookie_Agent?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+      // setShowCongrats(true);
+      }
+     catch (error) {
+      console.log('Error updating progress:', error);
+    }
+  };
+
+
+  useEffect(() => {
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: PasswordData, error } = await supabase
+          .from('password')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (PasswordData?.completed) {
+          setIsPasswordCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Internet_Safety/Rookie_Agent?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+   
+    if (Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      setUserId(decryptedId);
+      checkCompletion(userId)
+      if(!IsPasswordCompleted){ initializeProgressRecord(decryptedId); }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    }
+  }, [userId]);
 
   const formatTime = useCallback((seconds: number): string => {
     if (seconds < 1) return "Instantly";
@@ -151,9 +348,7 @@ const PasswordSamurai: React.FC = () => {
     setPassword(e.target.value);
   }, []);
 
-  const handleNextStep = useCallback(() => {
-    alert("Next Step");
-  }, []);
+
 
   return (
     <div className="w-full max-w-2xl mx-auto p-4">
@@ -176,7 +371,7 @@ const PasswordSamurai: React.FC = () => {
               placeholder="Enter your password"
               value={password}
               onChange={handlePasswordChange}
-              className="text-lg"
+              className="text-2xl"
             />
             <Progress value={strength} className={`h-2 ${getStrengthColor()}`} />
           </div>
@@ -222,7 +417,7 @@ const PasswordSamurai: React.FC = () => {
           {canProceed && (
             <button
               className="w-1/4 ml-[75%] mt-4 py-2 px-4 bg-green-500 text-white rounded hover:bg-green-600"
-              onClick={handleNextStep}
+              onClick={updateProgress}
             >
               Next
             </button>
@@ -233,4 +428,17 @@ const PasswordSamurai: React.FC = () => {
   );
 };
 
-export default PasswordSamurai;
+
+const PasswordSamuraiApp= () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <PasswordSamurai />
+    </Suspense>
+  );
+};
+
+export default PasswordSamuraiApp;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -21,8 +21,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter, useSearchParams } from 'next/navigation';
+import Cookies from "js-cookie";
 
-// Types
+// Updated Type Definitions
 interface FirewallRule {
   source: string;
   destination: string;
@@ -38,9 +41,8 @@ interface ZoneConfig {
   allowed_services: string[];
 }
 
-type ExerciseTemplate = FirewallRule | ZoneConfig;
+type ExerciseTemplate = Partial<FirewallRule> | Partial<ZoneConfig>;
 
-// Types
 interface Exercise {
   type: 'rule-creation' | 'zone-config' | 'policy-config';
   title: string;
@@ -67,6 +69,18 @@ interface RuleCreationExerciseProps {
   exercise: Exercise;
   onComplete: (result: FirewallRule) => void;
 }
+
+type Firewall = {
+  id: string;
+  field_agent_id: string | null;
+  student_id: string;
+  current_module: string | null;
+  total_modules: number;
+  started_at: string;
+  last_activity: string;
+  completed: boolean;
+  completed_at: string | null;
+};
 
 const modules: Module[] = [
   {
@@ -153,12 +167,12 @@ const ModuleDialog: React.FC<ModuleDialogProps> = ({ module, open, onClose }) =>
 );
 
 const RuleCreationExercise: React.FC<RuleCreationExerciseProps> = ({ exercise, onComplete }) => {
-  const [rule, setRule] = useState<FirewallRule>(exercise.template as FirewallRule || {
-    source: '',
-    destination: '',
-    port: '',
-    action: '',
-    protocol: ''
+  const [rule, setRule] = useState<FirewallRule>({
+    source: (exercise.template as FirewallRule)?.source || '',
+    destination: (exercise.template as FirewallRule)?.destination || '',
+    port: (exercise.template as FirewallRule)?.port || '',
+    action: (exercise.template as FirewallRule)?.action || '',
+    protocol: (exercise.template as FirewallRule)?.protocol || ''
   });
 
   return (
@@ -239,9 +253,18 @@ const RuleCreationExercise: React.FC<RuleCreationExerciseProps> = ({ exercise, o
 };
 
 const FirewallTraining: React.FC = () => {
+  const router = useRouter();
+  const params = useSearchParams();
+  const supabase = createClientComponentClient();
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [progress, setProgress] = useState<Record<string, boolean>>({});
+  const [userId, setUserId] = useState<string | null>(null);
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+  const [progressRecord, setProgressRecord] = useState<Firewall | null>(null);
+  const [IsFirewallCompleted, setIsFirewallCompleted] = useState<boolean>(false);
 
   const handleModuleSelect = (module: Module) => {
     setCurrentModule(module);
@@ -255,7 +278,149 @@ const FirewallTraining: React.FC = () => {
         [currentModule.id]: true
       });
     }
+    updateProgress();
   };
+
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
+
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+      const { data: computerBasicsData, error: computerBasicsError } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+
+      if (computerBasicsError || !computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      const { data: internet_safetyData, error: internet_safetyError } = await supabase
+        .from('internet_safety')
+        .select('id')
+        .eq('computer_basics_id', computerBasicsData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (internet_safetyError || !internet_safetyData) {
+        router.push(`/Module_1/Computer_Basics/Internet_Safety/Rookie_Agent/passwords?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      let { data: questData, error:questError } = await supabase
+        .from('field_agent')
+        .select('id')
+        .eq('internet_safety_id', internet_safetyData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (questError || !questData) {
+        router.push(`/Module_1/Computer_Basics/Internet_Safety/Field_Samurai/Antivirus?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      const { data: existingRecord } = await supabase
+        .from('firewall')
+        .select('*')
+        .eq('field_agent_id', questData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (existingRecord) {
+        setProgressRecord(existingRecord);
+      } else {
+        const { data: newRecord, error: insertError } = await supabase
+          .from('firewall')
+          .insert([{
+            field_agent_id: questData?.id,
+            student_id: studentId,
+            current_module: currentModule?.id,
+            total_modules: 3,
+            completed: false,
+            started_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (newRecord) {
+          setProgressRecord(newRecord);
+        }
+      }
+    } catch (error) {
+      console.log('Error in initializeProgressRecord:', error);
+    }
+  };
+
+  const updateProgress = async () => {
+    if (!progressRecord || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('firewall')
+        .update({
+          current_module: currentModule?.id,
+          completed: true,
+          last_activity: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      setIsFirewallCompleted(true);
+    } catch (error) {
+      console.log('Error updating progress:', error);
+    }
+  };
+
+  useEffect(() => {
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: firewallData, error } = await supabase
+          .from('firewall')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (firewallData?.completed) {
+          setIsFirewallCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
+      setUserId(decryptedId);
+      checkCompletion(decryptedId);
+      if (!IsFirewallCompleted) {
+        initializeProgressRecord(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
+    }
+  },[userId])
+
+  {/* Previous imports and type definitions remain the same */}
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
@@ -308,11 +473,13 @@ const FirewallTraining: React.FC = () => {
       {currentModule && !showDialog && (
         <div className="space-y-4">
           {currentModule.exercises.map((exercise, index) => (
-            <RuleCreationExercise
-              key={index}
-              exercise={exercise}
-              onComplete={handleExerciseComplete}
-            />
+            exercise.type === 'rule-creation' ? (
+              <RuleCreationExercise
+                key={index}
+                exercise={exercise}
+                onComplete={handleExerciseComplete}
+              />
+            ) : null
           ))}
         </div>
       )}
@@ -320,4 +487,18 @@ const FirewallTraining: React.FC = () => {
   );
 };
 
-export default FirewallTraining;
+
+const FirewallTrainingApp = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <FirewallTraining />
+    </Suspense>
+  );
+};
+
+
+export default FirewallTrainingApp;

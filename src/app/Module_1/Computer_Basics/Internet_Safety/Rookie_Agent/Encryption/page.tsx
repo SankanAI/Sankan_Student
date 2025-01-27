@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useCallback, Suspense } from "react";
 import { 
   Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter 
 } from "@/components/ui/card";
@@ -66,12 +66,71 @@ const modules: Module[] = [
         description: "Help the young samurai protect their messages",
         challenges: [
           {
-            question: "Which message is the plaintext (normal message)?",
-            options: ["HELLO", "X@LL0", "H3LL0", "!@#$%"],
+            question: "Which message is the ciphertext (secret message)?",
+            options: ["HELLO", "@#$%!!", "MEET AT NOON", "123456"],
+            correct: 1,
+            explanation: "Ciphertext is a message that looks unreadable without knowing the encryption rule. '@#$%!!' fits this description."
+          },
+          {
+            question: "What is the plaintext for this ciphertext if the rule shifts each letter by 3? Ciphertext: 'FRZDUGV'",
+            options: ["FORWARDS", "BACKWARDS", "ONWARDS", "UPWARDS"],
             correct: 0,
-            explanation: "HELLO is the plaintext because it's readable without any special code!"
+            explanation: "By shifting each letter in 'FRZDUGV' backward by 3, you get the plaintext 'FORWARDS'."
+          },
+          {
+            question: "Which of these keys was used to encrypt the message 'LIPPS' from 'HELLO'?",
+            options: ["Key = 1", "Key = 4", "Key = 5", "Key = 2"],
+            correct: 2,
+            explanation: "Using a key of 5 shifts each letter in 'HELLO' forward by 5, resulting in 'LIPPS'."
+          },
+          {
+            question: "Your friend decrypted a message using a Caesar cipher. Which one of these messages was NOT encrypted with a key of 2?",
+            options: [
+              "Plaintext: 'MEET' → Ciphertext: 'OGGV'",
+              "Plaintext: 'TRAIN' → Ciphertext: 'VTCKP'",
+              "Plaintext: 'BATTLE' → Ciphertext: 'DCVVNG'",
+              "Plaintext: 'SWORD' → Ciphertext: 'UXQTF'"
+            ],
+            correct: 1,
+            explanation: "The second message does not follow the Caesar cipher rule with a key of 2, as the shifts do not align properly."
+          },
+          {
+            question: "If 'H3LL0' is your ciphertext, which of these is the correct plaintext?",
+            options: ["HELLO", "HALL0", "HILL0", "HALLO"],
+            correct: 0,
+            explanation: "'H3LL0' replaces 'E' with '3' in a simple substitution cipher. The correct plaintext is 'HELLO'."
+          },
+          {
+            question: "You scrambled a message and sent it to your friend. The scrambled message is 'TIRNAGIN'. What is the plaintext?",
+            options: ["TRAINING", "TRIGGERING", "TIERING", "TARGETING"],
+            correct: 0,
+            explanation: "Rearranging 'TIRNAGIN' gives the plaintext 'TRAINING'."
+          },
+          {
+            question: "What is the correct ciphertext if the encryption rule shifts each letter forward by 4? Plaintext: 'SAMURAI'",
+            options: ["WEQYVEFM", "SAMURAYI", "WEOYVEM", "WEQYWEM"],
+            correct: 3,
+            explanation: "Shifting each letter in 'SAMURAI' forward by 4 gives the ciphertext 'WEQYWEM'."
+          },
+          {
+            question: "You intercepted four encrypted messages. Only one of them is valid ciphertext. Which one is it?",
+            options: ["TRAINING", "!@#$%^", "MEET ME HERE", "HELLO123"],
+            correct: 1,
+            explanation: "Ciphertext looks unreadable and doesn't resemble the original plaintext. '!@#$%^' is the valid ciphertext."
+          },
+          {
+            question: "Decrypt the following ciphertext: 'XUBBE MEET'. Rule: Shift each letter back by 5.",
+            options: ["TRAIN MEET", "MEET HERE", "SAMURAI MEET", "HELLO MEET"],
+            correct: 3,
+            explanation: "Shifting each letter in 'XUBBE MEET' back by 5 gives 'HELLO MEET'."
+          },
+          {
+            question: "Which message uses a substitution cipher? (Each letter is replaced with another letter.)",
+            options: ["PLMNO PQRS", "!@#$% ^&*()", "GDKKN VNQKC", "12345 67890"],
+            correct: 2,
+            explanation: "'GDKKN VNQKC' is the only option that uses a substitution cipher. Each letter in 'HELLO WORLD' is shifted backward by 1."
           }
-        ]
+        ]  
       }
     },
     {
@@ -94,6 +153,60 @@ const modules: Module[] = [
             options: ["HELLO", "WORLD", "NINJA", "SWORD"],
             correct: 0,
             explanation: "Moving each letter back by 1 step: I→H, F→E, M→L, M→L, P→O spells HELLO!"
+          },
+          {
+            question: "Using a shift of 2, decode 'KHOOR'. What does it say?",
+            options: ["HELLO", "WORLD", "CAESAR", "PEACE"],
+            correct: 0,
+            explanation: "Moving each letter back by 2 steps: K→H, H→E, O→L, O→L, R→O spells HELLO!"
+          },
+          {
+            question: "What is the ciphertext of 'TRAIN' with a shift of 4?",
+            options: ["UWBJS", "VXEMR", "XVEIR", "WYFMS"],
+            correct: 3,
+            explanation: "Shifting each letter forward by 4: T→W, R→Y, A→F, I→M, N→S results in 'WYFMS'."
+          },
+          {
+            question: "If the ciphertext is 'FRZDUGV' with a shift of 3, what is the plaintext?",
+            options: ["FORWARDS", "BACKWARDS", "ONWARDS", "UPWARDS"],
+            correct: 0,
+            explanation: "Shifting each letter back by 3: F→C, R→O, Z→W, D→A, U→R, G→D, V→S spells 'FORWARDS'."
+          },
+          {
+            question: "What does 'NZDMF' decode to if the key is 1?",
+            options: ["MYSTIC", "MEET", "MAGIC", "MYSELF"],
+            correct: 3,
+            explanation: "Shifting each letter back by 1: N→M, Z→Y, D→S, M→E, F→L spells 'MYSELF'."
+          },
+          {
+            question: "What is the plaintext for the ciphertext 'SZWLY' if the shift is 5?",
+            options: ["PLAIN", "SHIFT", "START", "CIPHER"],
+            correct: 0,
+            explanation: "Shifting each letter back by 5: S→P, Z→L, W→A, L→I, Y→N spells 'PLAIN'."
+          },
+          {
+            question: "Decode 'WKH VHFUHW' with a shift of 3. What does it say?",
+            options: ["THE SECRET", "WITH SECRET", "WE SECRET", "SEE SECRET"],
+            correct: 0,
+            explanation: "Shifting each letter back by 3: W→T, K→H, H→E, V→S, H→E, F→C, U→R, H→E, W→T spells 'THE SECRET'."
+          },
+          {
+            question: "Encode 'SECRET' using a shift of 7. What is the ciphertext?",
+            options: ["XJIZVW", "UIVOXL", "ZJOLZY", "YKJVYZ"],
+            correct: 0,
+            explanation: "Shifting each letter forward by 7: S→X, E→J, C→I, R→Z, E→V, T→W results in 'XJIZVW'."
+          },
+          {
+            question: "What does 'DSOHG' mean with a shift of 3?",
+            options: ["ALERT", "PLANE", "SPOKE", "TABLE"],
+            correct: 3,
+            explanation: "Shifting each letter back by 3: D→A, S→L, O→P, H→E, G→D spells 'TABLE'."
+          },
+          {
+            question: "If the ciphertext is 'VJG OQTG', what is the plaintext using a shift of 2?",
+            options: ["THE MORE", "THE LESS", "THE CODE", "THE NOTE"],
+            correct: 0,
+            explanation: "Shifting each letter back by 2: V→T, J→H, G→E, O→M, Q→O, T→R, G→E spells 'THE MORE'."
           }
         ]
       }
@@ -118,6 +231,60 @@ const modules: Module[] = [
             options: ["ABC", "XYZ", "DEF", "MNO"],
             correct: 0,
             explanation: "Replace each symbol with its pair: Z→C, Y→B, X→A spells ABC!"
+          },
+          {
+            question: "Using the code A=★, B=◆, C=▲, decode: ▲◆★◆",
+            options: ["CABC", "CAB", "CBAB", "ABAC"],
+            correct: 1,
+            explanation: "Replace each symbol with its pair: ▲→C, ◆→B, ★→A spells CAB."
+          },
+          {
+            question: "If M=♣, N=♦, O=♥, decode: ♣♦♥",
+            options: ["MON", "MNO", "NOM", "OMN"],
+            correct: 1,
+            explanation: "Replace each symbol with its pair: ♣→M, ♦→N, ♥→O spells MNO."
+          },
+          {
+            question: "If A=X, B=Y, C=Z, what is the ciphertext for 'BAC'?",
+            options: ["YZX", "XYZ", "YXZ", "XZY"],
+            correct: 2,
+            explanation: "Replace each letter with its pair: B→Y, A→X, C→Z spells YXZ."
+          },
+          {
+            question: "Decode ★▲◆★▲ using the code A=★, B=◆, C=▲.",
+            options: ["ACAAC", "AABCA", "CABAC", "CBAAC"],
+            correct: 0,
+            explanation: "Replace each symbol with its pair: ★→A, ▲→C, ◆→B spells ACAAC."
+          },
+          {
+            question: "If E=⚡, F=☀, G=❄, decode: ⚡☀❄☀⚡",
+            options: ["EFFEF", "EFEFE", "EFGFE", "EFGFF"],
+            correct: 1,
+            explanation: "Replace each symbol with its pair: ⚡→E, ☀→F, ❄→G spells EFEFE."
+          },
+          {
+            question: "If H=♠, I=♣, J=♦, encode: HIJIH",
+            options: ["♠♣♦♣♠", "♦♣♠♠♣", "♣♠♠♣♦", "♠♦♠♣♣"],
+            correct: 0,
+            explanation: "Replace each letter with its symbol: H→♠, I→♣, J→♦ spells ♠♣♦♣♠."
+          },
+          {
+            question: "If A=★, B=◆, C=▲, and D=■, decode: ▲■◆★",
+            options: ["CADB", "CBAD", "DABC", "DCBA"],
+            correct: 3,
+            explanation: "Replace each symbol with its pair: ▲→C, ■→D, ◆→B, ★→A spells DCBA."
+          },
+          {
+            question: "Using the code A=☆, B=♢, C=☽, decode: ☆♢☽☽☆",
+            options: ["ABCCA", "ACBCA", "ACCBA", "ABACB"],
+            correct: 0,
+            explanation: "Replace each symbol with its pair: ☆→A, ♢→B, ☽→C spells ABCCA."
+          },
+          {
+            question: "If P=☺, Q=☹, R=☻, encode: QPRPQ",
+            options: ["☹☺☻☺☹", "☻☺☹☺☻", "☹☹☺☻☹", "☻☻☺☹☺"],
+            correct: 0,
+            explanation: "Replace each letter with its symbol: Q→☹, P→☺, R→☻ spells ☹☺☻☺☹."
           }
         ]
       }
@@ -142,6 +309,60 @@ const modules: Module[] = [
             options: ["1101", "1001", "1111", "1011"],
             correct: 1,
             explanation: "Performing XOR bit by bit gives: 1 XOR 0 = 1, 0 XOR 0 = 0, 1 XOR 1 = 0, 0 XOR 1 = 1, resulting in 1001."
+          },
+          {
+            question: "What is 1111 XOR 0000?",
+            options: ["0000", "1111", "1010", "1001"],
+            correct: 1,
+            explanation: "XOR with 0 leaves the bits unchanged, so the result is 1111."
+          },
+          {
+            question: "What is 1100 XOR 1010?",
+            options: ["0110", "1110", "0011", "0101"],
+            correct: 0,
+            explanation: "Performing XOR bit by bit: 1 XOR 1 = 0, 1 XOR 0 = 1, 0 XOR 1 = 1, 0 XOR 0 = 0, resulting in 0110."
+          },
+          {
+            question: "What is 0110 XOR 0110?",
+            options: ["0000", "1111", "1010", "1001"],
+            correct: 0,
+            explanation: "Any number XORed with itself results in 0, so the answer is 0000."
+          },
+          {
+            question: "What is 1001 XOR 0101?",
+            options: ["1100", "0011", "1111", "1010"],
+            correct: 1,
+            explanation: "Performing XOR bit by bit: 1 XOR 0 = 1, 0 XOR 1 = 1, 0 XOR 0 = 0, 1 XOR 1 = 0, resulting in 0011."
+          },
+          {
+            question: "Which binary number, when XORed with 1010, results in 1111?",
+            options: ["0101", "1101", "0111", "0011"],
+            correct: 2,
+            explanation: "Performing XOR: 1 XOR 0 = 1, 0 XOR 1 = 1, 1 XOR 1 = 0, 0 XOR 1 = 1, so the answer is 0111."
+          },
+          {
+            question: "What is 0101 XOR 1010?",
+            options: ["1111", "0000", "1101", "0010"],
+            correct: 0,
+            explanation: "Performing XOR bit by bit gives: 0 XOR 1 = 1, 1 XOR 0 = 1, 0 XOR 1 = 1, 1 XOR 0 = 1, resulting in 1111."
+          },
+          {
+            question: "Which binary number, when XORed with 1111, results in 0000?",
+            options: ["1111", "0000", "1010", "1100"],
+            correct: 0,
+            explanation: "Any number XORed with itself results in 0, so the answer is 1111."
+          },
+          {
+            question: "What is 101010 XOR 110110?",
+            options: ["011100", "111100", "001100", "100000"],
+            correct: 2,
+            explanation: "Performing XOR bit by bit gives: 1 XOR 1 = 0, 0 XOR 1 = 1, 1 XOR 0 = 1, 0 XOR 1 = 1, 1 XOR 1 = 0, 0 XOR 0 = 0, resulting in 001100."
+          },
+          {
+            question: "If 1001 XOR X = 1110, what is X?",
+            options: ["0111", "1101", "1011", "0101"],
+            correct: 0,
+            explanation: "To find X, XOR both sides of the equation with 1001: 1001 XOR 1110 = 0111."
           }
         ]
       }
@@ -186,15 +407,92 @@ const modules: Module[] = [
           description: "Create your own one-time pad",
           challenges: [
             {
-              question: "Why is a one-time pad unbreakable?",
+              question: "Which of these hashes matches the data 'HELLO'?",
               options: [
-                "It uses a random key that is as long as the message",
-                "The key can be reused",
-                "It is based on mathematics",
-                "It uses a computer to generate codes"
+                "8b1a9953c4611296a827abf8c47804d7",
+                "5d41402abc4b2a76b9719d911017c592",
+                "d2d2d2f5dc2d2e9d9a5fa5a6f1f1f1a1",
+                "9d5e3ecdeb27d7d5b1a9f3a9c7a6f2f2"
               ],
               correct: 0,
-              explanation: "A one-time pad is unbreakable because the key is random, as long as the message, and never reused."
+              explanation: "'HELLO' hashed with MD5 produces 8b1a9953c4611296a827abf8c47804d7."
+            },
+            {
+              question: "What happens if you hash 'hello' instead of 'HELLO'?",
+              options: [
+                "The hash stays the same.",
+                "The hash is completely different.",
+                "The hash changes slightly.",
+                "Hashing doesn't work for lowercase letters."
+              ],
+              correct: 1,
+              explanation: "Hashes are case-sensitive, so 'HELLO' and 'hello' produce completely different hashes."
+            },
+            {
+              question: "Which of these hashes is produced by the data '12345' using MD5?",
+              options: [
+                "827ccb0eea8a706c4c34a16891f84e7b",
+                "098f6bcd4621d373cade4e832627b4f6",
+                "5d41402abc4b2a76b9719d911017c592",
+                "7b8b965ad4bca0e41ab51de7b31363a1"
+              ],
+              correct: 0,
+              explanation: "'12345' hashed with MD5 produces 827ccb0eea8a706c4c34a16891f84e7b."
+            },
+            {
+              question: "If the hash of 'PASSWORD' is 319f4d26e3c536b5dd871bb2c52e3178, what happens if you add a space at the end?",
+              options: [
+                "The hash remains the same.",
+                "The hash changes completely.",
+                "The hash changes slightly.",
+                "Hashing doesn't work with spaces."
+              ],
+              correct: 1,
+              explanation: "Even a tiny change, like adding a space, results in a completely different hash."
+            },
+            {
+              question: "Which of these hashes is likely to be a SHA-256 hash?",
+              options: [
+                "5d41402abc4b2a76b9719d911017c592",
+                "098f6bcd4621d373cade4e832627b4f6",
+                "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
+                "9d5e3ecdeb27d7d5b1a9f3a9c7a6f2f2"
+              ],
+              correct: 2,
+              explanation: "SHA-256 hashes are longer (64 characters) compared to MD5 hashes, which are 32 characters."
+            },
+            {
+              question: "If two files produce the same hash, what does that mean?",
+              options: [
+                "They are the same file.",
+                "They are different files.",
+                "Hashing is broken.",
+                "They might be the same file (collision)."
+              ],
+              correct: 3,
+              explanation: "If two files produce the same hash, it's called a collision. However, it's rare in secure hashing algorithms."
+            },
+            {
+              question: "What is the purpose of hashing passwords in databases?",
+              options: [
+                "To store passwords securely.",
+                "To make them easy to remember.",
+                "To encrypt them for later retrieval.",
+                "To generate random passwords."
+              ],
+              correct: 0,
+              explanation: "Hashing passwords ensures they are stored securely, and the original password cannot be retrieved."
+            },
+            {
+              question: "Which data produces this hash: '098f6bcd4621d373cade4e832627b4f6'?",
+              options: [
+                "HELLO",
+                "12345",
+                "TEST",
+                "test"
+              ],
+              correct: 3,
+              explanation: "'test' hashed with MD5 produces 098f6bcd4621d373cade4e832627b4f6."
             }
           ]
         }
@@ -215,12 +513,61 @@ const modules: Module[] = [
           description: "Decode messages hidden in pictures",
           challenges: [
             {
-              question: "Where can messages be hidden using steganography?",
-              options: ["Images", "Songs", "Videos", "All of the above"],
-              correct: 3,
-              explanation: "Messages can be hidden in various media, like images, songs, and videos."
+              question: "Why is a one-time pad unbreakable?",
+              options: [
+                "It uses a random key that is as long as the message",
+                "The key can be reused",
+                "It is based on mathematics",
+                "It uses a computer to generate codes"
+              ],
+              correct: 0,
+              explanation: "A one-time pad is unbreakable because the key is random, as long as the message, and never reused."
+            },
+            {
+              question: "What happens if the key is reused in a one-time pad?",
+              options: [
+                "The encryption remains secure",
+                "The encryption can be easily broken",
+                "It becomes a two-time pad",
+                "It generates a new key automatically"
+              ],
+              correct: 1,
+              explanation: "If the key is reused, patterns can emerge, making the encryption vulnerable to attacks."
+            },
+            {
+              question: "What is the primary requirement for the key in a one-time pad?",
+              options: [
+                "It must be longer than the message",
+                "It must be random and as long as the message",
+                "It must be generated using a computer",
+                "It must be easy to remember"
+              ],
+              correct: 1,
+              explanation: "The key must be completely random and the same length as the message for the encryption to be unbreakable."
+            },
+            {
+              question: "What is an example of a one-time pad application?",
+              options: [
+                "Banking transactions",
+                "World War II cipher communication",
+                "Modern email encryption",
+                "Data compression algorithms"
+              ],
+              correct: 1,
+              explanation: "One-time pads were famously used for secure communication during World War II."
+            },
+            {
+              question: "Why must the key in a one-time pad never be shared publicly?",
+              options: [
+                "It would make decryption too easy",
+                "It could be used to encrypt more messages",
+                "It would no longer be a random key",
+                "Public sharing is against the rules"
+              ],
+              correct: 0,
+              explanation: "If the key is shared publicly, an attacker can use it to decrypt the message, compromising security."
             }
-          ]
+          ]          
         }
       },
       {
@@ -243,6 +590,72 @@ const modules: Module[] = [
               options: ["A fingerprint", "A password", "Your username", "Your email"],
               correct: 0,
               explanation: "A fingerprint is a physical key that adds a second layer of security."
+            },
+            {
+              question: "Which of the following is NOT a valid 2FA method?",
+              options: [
+                "A one-time code sent via SMS",
+                "A secure password",
+                "An authenticator app",
+                "A hardware security key"
+              ],
+              correct: 1,
+              explanation: "A password is the first factor, not a second factor, in two-factor authentication."
+            },
+            {
+              question: "Why is 2FA more secure than just using a password?",
+              options: [
+                "It uses encryption.",
+                "It requires two pieces of information to access an account.",
+                "It hides your username.",
+                "It replaces passwords entirely."
+              ],
+              correct: 1,
+              explanation: "2FA is more secure because it requires both a password and a second factor, making it harder for attackers to gain access."
+            },
+            {
+              question: "What should you do if you lose access to your 2FA method?",
+              options: [
+                "Disable 2FA completely.",
+                "Use a backup code or recovery method.",
+                "Create a new account.",
+                "Share your login details with a friend."
+              ],
+              correct: 1,
+              explanation: "Most platforms provide backup codes or recovery options to regain access if you lose your 2FA method."
+            },
+            {
+              question: "Which of these is an example of a physical 2FA factor?",
+              options: [
+                "A PIN code",
+                "A hardware security key",
+                "An email verification code",
+                "A phone call"
+              ],
+              correct: 1,
+              explanation: "A hardware security key is a physical device that can be used as a second authentication factor."
+            },
+            {
+              question: "What does 'two-factor' mean in 2FA?",
+              options: [
+                "Using two passwords",
+                "Using two different authentication methods",
+                "Using two email addresses",
+                "Using two usernames"
+              ],
+              correct: 1,
+              explanation: "'Two-factor' means combining two distinct methods, such as something you know (password) and something you have (code or key)."
+            },
+            {
+              question: "Which of the following is the weakest form of 2FA?",
+              options: [
+                "SMS codes",
+                "Authenticator apps",
+                "Hardware keys",
+                "Biometrics"
+              ],
+              correct: 0,
+              explanation: "SMS codes are considered weaker because they can be intercepted or exploited through SIM swapping attacks."
             }
           ]
         }
@@ -272,8 +685,52 @@ const modules: Module[] = [
               ],
               correct: 0,
               explanation: "Quantum cryptography uses the laws of physics to ensure secure communication."
+            },
+            {
+              question: "What happens if someone tries to eavesdrop on a quantum communication channel?",
+              options: [
+                "The eavesdropper can intercept the message undetected",
+                "The communication becomes faster",
+                "The message is instantly altered",
+                "Nothing happens; it remains secure"
+              ],
+              correct: 2,
+              explanation: "Quantum cryptography ensures that any eavesdropping attempt alters the message, making it detectable."
+            },
+            {
+              question: "What is Quantum Key Distribution (QKD)?",
+              options: [
+                "A method to share a secret key using quantum mechanics",
+                "A way to encrypt messages using quantum computers",
+                "A type of quantum teleportation",
+                "A process for faster communication"
+              ],
+              correct: 0,
+              explanation: "QKD is a secure method of sharing a secret key over a quantum channel using the principles of quantum mechanics."
+            },
+            {
+              question: "What is the main advantage of quantum cryptography over classical cryptography?",
+              options: [
+                "It is faster",
+                "It requires no keys",
+                "It detects eavesdropping",
+                "It uses simpler algorithms"
+              ],
+              correct: 2,
+              explanation: "Quantum cryptography's primary advantage is its ability to detect eavesdropping using the principles of quantum mechanics."
+            },
+            {
+              question: "What is a key concept in quantum mechanics used in quantum cryptography?",
+              options: [
+                "Entanglement",
+                "Relativity",
+                "Wave-particle duality",
+                "Superposition"
+              ],
+              correct: 3,
+              explanation: "Superposition is one of the key concepts in quantum mechanics, used to ensure the security of quantum cryptography."
             }
-          ]
+          ]          
         }
       },
       {
@@ -292,7 +749,7 @@ const modules: Module[] = [
           description: "Build a secure Link using encryption",
           challenges: [
             {
-              question: "Why is blockLink secure?",
+              question: "Why is BlockLink secure?",
               options: [
                 "It links blocks with cryptography",
                 "It uses a single key",
@@ -301,6 +758,72 @@ const modules: Module[] = [
               ],
               correct: 0,
               explanation: "BlockLink uses cryptography to link blocks, making it tamper-proof."
+            },
+            {
+              question: "What makes a BlockLink chain tamper-proof?",
+              options: [
+                "The data is encrypted",
+                "The blocks are connected using cryptographic hashes",
+                "It uses a centralized server",
+                "All blocks are stored on a single device"
+              ],
+              correct: 1,
+              explanation: "The blocks in BlockLink are connected using cryptographic hashes, making it very difficult to tamper with."
+            },
+            {
+              question: "What happens if a single block in the BlockLink chain is changed?",
+              options: [
+                "Only the block itself changes.",
+                "The entire chain becomes invalid.",
+                "The previous block is also changed.",
+                "No effect on the chain."
+              ],
+              correct: 1,
+              explanation: "If a single block is altered, the reference to the previous block changes, making the entire chain invalid and tamper-proof."
+            },
+            {
+              question: "Which of the following could be a potential use for BlockLink technology?",
+              options: [
+                "Creating a secure online voting system",
+                "Designing a one-time password system",
+                "Sending an encrypted email",
+                "Encrypting a single file"
+              ],
+              correct: 0,
+              explanation: "BlockLink can be used to create secure systems, like an online voting platform, where data integrity is crucial."
+            },
+            {
+              question: "What is the main advantage of using BlockLink over a traditional database?",
+              options: [
+                "Centralized control",
+                "Easier to manage",
+                "Decentralized and tamper-proof",
+                "Requires less storage space"
+              ],
+              correct: 2,
+              explanation: "BlockLink is decentralized and tamper-proof, making it ideal for situations where data integrity and security are crucial."
+            },
+            {
+              question: "Which cryptographic concept is often used in BlockLink technology to link blocks?",
+              options: [
+                "Symmetric encryption",
+                "Public-key encryption",
+                "Hash functions",
+                "Asymmetric encryption"
+              ],
+              correct: 2,
+              explanation: "Hash functions are commonly used in BlockLink to link each block to the previous one securely."
+            },
+            {
+              question: "What is the role of cryptographic hashes in BlockLink?",
+              options: [
+                "To encrypt data",
+                "To verify the integrity of data",
+                "To store data",
+                "To track ownership of data"
+              ],
+              correct: 1,
+              explanation: "Cryptographic hashes are used to verify the integrity of data in BlockLink by creating a unique reference for each block."
             }
           ]
         }
@@ -313,20 +836,130 @@ const EncryptionLearningPortal: React.FC = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [currentChallenge, setCurrentChallenge] = useState(0);
+  const [quizResults, setQuizResults] = useState<{
+    [moduleId: string]: {
+      totalQuestions: number;
+      correctAnswers: number;
+      incorrectAnswers: number;
+      completed: boolean;
+    }
+  }>({});
+  const [challengeResult, setChallengeResult] = useState<{
+    isCorrect: boolean | null;
+    explanation: string;
+  }>({ isCorrect: null, explanation: "" });
 
   const handleModuleClick = (module: Module) => {
     setSelectedModule(module);
     setShowDialog(true);
     setCurrentChallenge(0);
+    setChallengeResult({ isCorrect: null, explanation: "" });
+
+    // Initialize quiz results for this module if not exists
+    if (!quizResults[module.id]) {
+      setQuizResults(prev => ({
+        ...prev,
+        [module.id]: {
+          totalQuestions: module.game.challenges.length,
+          correctAnswers: 0,
+          incorrectAnswers: 0,
+          completed: false
+        }
+      }));
+    }
   };
 
-  const handleAnswerSubmit = (moduleId: string, isCorrect: boolean) => {
+  const handleAnswerSubmit = useCallback((moduleId: string, selectedIndex: number) => {
+    if (!selectedModule) return;
+
+    const currentChal = selectedModule.game.challenges[currentChallenge];
+    const isCorrect = selectedIndex === currentChal.correct;
+
+    // Update quiz results
+    setQuizResults(prev => {
+      const moduleResults = prev[moduleId] || {
+        totalQuestions: selectedModule.game.challenges.length,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        completed: false
+      };
+
+      return {
+        ...prev,
+        [moduleId]: {
+          ...moduleResults,
+          correctAnswers: isCorrect 
+            ? moduleResults.correctAnswers + 1 
+            : moduleResults.correctAnswers,
+          incorrectAnswers: !isCorrect 
+            ? moduleResults.incorrectAnswers + 1 
+            : moduleResults.incorrectAnswers,
+          completed: currentChallenge + 1 === selectedModule.game.challenges.length
+        }
+      };
+    });
+
+    // Set challenge result for explanation
+    setChallengeResult({
+      isCorrect,
+      explanation: currentChal.explanation
+    });
+
+    // Update progress if correct
     if (isCorrect) {
       setProgress((prev) => ({
         ...prev,
-        [moduleId]: (prev[moduleId] || 0) + 33,
+        [moduleId]: Math.min((prev[moduleId] || 0) + 33, 100)
       }));
     }
+
+    // Move to next challenge after a short delay
+    setTimeout(() => {
+      if (currentChallenge + 1 < selectedModule.game.challenges.length) {
+        setCurrentChallenge(prev => prev + 1);
+        setChallengeResult({ isCorrect: null, explanation: "" });
+      } else {
+        // Complete module if all challenges are done
+        setProgress((prev) => ({
+          ...prev,
+          [moduleId]: 100
+        }));
+      }
+    }, 2000);
+  }, [selectedModule, currentChallenge]);
+
+  // Function to render quiz results
+  const renderQuizResults = (moduleId: string) => {
+    const results = quizResults[moduleId];
+    if (!results) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+        <h3 className="text-xl font-bold mb-2">Quiz Results</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <p className="font-semibold">Total Questions</p>
+            <p className="text-2xl">{results.totalQuestions}</p>
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-green-600">Correct Answers</p>
+            <p className="text-2xl text-green-700">{results.correctAnswers}</p>
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-red-600">Incorrect Answers</p>
+            <p className="text-2xl text-red-700">{results.incorrectAnswers}</p>
+          </div>
+        </div>
+        <div className="mt-4 text-center">
+          <Badge 
+            variant={results.completed ? "default" : "outline"}
+            className={results.completed ? "bg-green-500 text-white" : ""}
+          >
+            {results.completed ? "Completed" : "Not Completed"}
+          </Badge>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -408,50 +1041,55 @@ const EncryptionLearningPortal: React.FC = () => {
                   </TabsContent>
 
                   <TabsContent value="practice">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>{selectedModule.game.title}</CardTitle>
-                        <CardDescription>
-                          {selectedModule.game.description}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {selectedModule.game.challenges[currentChallenge] && (
-                          <div className="space-y-4">
-                            <p className="text-lg font-semibold">
-                              {
-                                selectedModule.game.challenges[
-                                  currentChallenge
-                                ].question
-                              }
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{selectedModule.game.title}</CardTitle>
+                    <CardDescription>
+                      {selectedModule.game.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedModule.game.challenges[currentChallenge] && (
+                      <div className="space-y-4">
+                        <p className="text-lg font-semibold">
+                          {
+                            selectedModule.game.challenges[
+                              currentChallenge
+                            ].question
+                          }
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          {selectedModule.game.challenges[
+                            currentChallenge
+                          ].options.map((option, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              className="text-lg py-8"
+                              onClick={() => handleAnswerSubmit(selectedModule.id, idx)}
+                              disabled={challengeResult.isCorrect !== null}
+                            >
+                              {option}
+                            </Button>
+                          ))}
+                        </div>
+                        {challengeResult.isCorrect !== null && (
+                          <div className={`p-4 rounded-lg ${challengeResult.isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <p className="font-semibold">
+                              {challengeResult.isCorrect ? "Correct!" : "Incorrect"}
                             </p>
-                            <div className="grid grid-cols-2 gap-4">
-                              {selectedModule.game.challenges[
-                                currentChallenge
-                              ].options.map((option, idx) => (
-                                <Button
-                                  key={idx}
-                                  variant="outline"
-                                  className="text-lg py-8"
-                                  onClick={() =>
-                                    handleAnswerSubmit(
-                                      selectedModule.id,
-                                      idx ===
-                                        selectedModule.game.challenges[
-                                          currentChallenge
-                                        ].correct
-                                    )
-                                  }
-                                >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                            <p>{challengeResult.explanation}</p>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
+                      </div>
+                    )}
+                    
+                    {/* Add quiz results display */}
+                    {currentChallenge === selectedModule.game.challenges.length - 1 && 
+                     renderQuizResults(selectedModule.id)}
+                  </CardContent>
+                </Card>
+              </TabsContent>
                 </Tabs>
               </>
             )}
@@ -462,4 +1100,17 @@ const EncryptionLearningPortal: React.FC = () => {
   );
 };
 
-export default EncryptionLearningPortal;
+
+const EncryptionLearningPortalApp = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <EncryptionLearningPortal />
+    </Suspense>
+  );
+};
+
+export default EncryptionLearningPortalApp;

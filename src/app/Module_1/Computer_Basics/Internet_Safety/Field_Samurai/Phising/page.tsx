@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -16,6 +16,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter, useSearchParams } from 'next/navigation';
+import Cookies from "js-cookie";
 
 interface Threat {
   id: string;
@@ -33,66 +36,260 @@ interface PhishingEmail {
   points: number;
 }
 
-const phishingEmails: PhishingEmail[] = [
+const phishingEmails = [
   {
     id: 1,
-    from: 'security@app1e.com',
-    subject: 'Urgent: Your Account Security is at Risk',
-    date: '2024-01-06 10:30 AM',
-    content: `Dear Valued Customer,
+    from: "support@amaz0n.com",
+    subject: "Important: Verify Your Account!",
+    date: "2025-01-15 9:00 AM",
+    content: `Dear User,
 
-We've detected suspicious activity on your account. Click the link below immediately to verify your identity and secure your account:
+We noticed unusual activity on your account. Please verify your account by clicking the link below:
 
-https://app1e.security-verify.com/login
+https://amaz0n-security.com/verify
 
-If you don't verify within 24 hours, your account will be suspended.
+If you do not verify in the next 24 hours, your account will be locked.
 
-Best regards,
-Security Team`,
+Thank you, 
+Amazon Support`,
     threats: [
-      { id: 'spoofed-domain', type: 'Spoofed Domain', description: 'Notice the number &quot;1&quot; in Apple' },
-      { id: 'urgency', type: 'False Urgency', description: 'Creating panic with time pressure' },
-      { id: 'suspicious-link', type: 'Suspicious Link', description: 'Misleading URL in link' }
+      { id: "spoofed-domain", type: "Spoofed Domain", description: "The 'o' in 'Amazon' is replaced with '0'." },
+      { id: "urgency", type: "False Urgency", description: "Forcing quick action with time pressure." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Fake link not pointing to the official site." }
     ],
     points: 30
   },
   {
     id: 2,
-    from: 'hr.department@company-careers.net',
-    subject: 'Job Opportunity - Immediate Start',
-    date: '2024-01-06 2:15 PM',
+    from: "bankalerts@secure-banking.com",
+    subject: "Unauthorized Login Attempt!",
+    date: "2025-01-14 4:30 PM",
+    content: `Dear Customer,
+
+Someone tried to log in to your bank account. If it wasn't you, please confirm your details here:
+
+https://secure-banking.com/login
+
+Failure to confirm may result in account deactivation.
+
+Thank you, 
+Your Bank`,
+    threats: [
+      { id: "fake-sender", type: "Fake Sender", description: "Sender not from an official bank domain." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Link looks official but isn't." },
+      { id: "urgency", type: "False Urgency", description: "Tries to scare the recipient into acting fast." }
+    ],
+    points: 30
+  },
+  {
+    id: 3,
+    from: "giveaway@prize-claims.com",
+    subject: "Congratulations! You've Won a $1,000 Gift Card!",
+    date: "2025-01-14 11:15 AM",
     content: `Hi there,
 
-Based on your profile, we'd like to offer you a work-from-home position at our company.
-Salary: $8,000 - $10,000 per month
-Hours: Flexible
+Congratulations! You've won a $1,000 gift card. Claim your prize by clicking the link below:
 
-To start immediately, please fill out your details here:
-www.company-careers.net/apply
+https://prize-claims.com/winner
 
-Requirements:
-- No experience needed
-- Work from home
-- Quick start
+Hurry, this offer expires soon!
 
-Best regards,
-HR Department`,
+Best regards, 
+Prize Team`,
     threats: [
-      { id: 'too-good', type: 'Too Good To Be True', description: 'Unrealistic salary offer' },
-      { id: 'generic-greeting', type: 'Generic Greeting', description: 'No specific recipient name' },
-      { id: 'suspicious-sender', type: 'Suspicious Sender', description: 'Generic company name' }
+      { id: "too-good", type: "Too Good To Be True", description: "Unrealistic prize with no context." },
+      { id: "generic-greeting", type: "Generic Greeting", description: "No specific recipient name mentioned." },
+      { id: "urgency", type: "False Urgency", description: "Creates pressure to claim immediately." }
     ],
     points: 25
+  },
+  {
+    id: 4,
+    from: "schooladmin@report-cards.com",
+    subject: "Access Your Report Card Now!",
+    date: "2025-01-13 3:45 PM",
+    content: `Dear Student,
+
+Your report card is ready! Download it now by clicking the link below:
+
+https://report-cards.com/student-login
+
+Act fast to avoid losing access to this important document.
+
+Best regards, 
+School Admin`,
+    threats: [
+      { id: "spoofed-sender", type: "Spoofed Sender", description: "Looks like a school admin but is fake." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Link does not belong to the school." },
+      { id: "urgency", type: "False Urgency", description: "Tries to make the email seem critical." }
+    ],
+    points: 25
+  },
+  {
+    id: 5,
+    from: "gaming-rewards@onlinestore.net",
+    subject: "Exclusive Offer: Free Game Points!",
+    date: "2025-01-13 6:30 PM",
+    content: `Hello Gamer,
+
+You are selected to receive 500 free game points! Claim your reward here:
+
+https://onlinestore.net/rewards-claim
+
+Don't miss this once-in-a-lifetime offer.
+
+Happy Gaming, 
+Rewards Team`,
+    threats: [
+      { id: "too-good", type: "Too Good To Be True", description: "Promising something unrealistic for free." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Fake link trying to collect personal details." },
+      { id: "urgency", type: "False Urgency", description: "Claims it's a 'limited-time' offer." }
+    ],
+    points: 20
+  },
+  {
+    id: 6,
+    from: "helpdesk@schoolportal.net",
+    subject: "Password Reset Request",
+    date: "2025-01-12 10:15 AM",
+    content: `Hi Student,
+
+A password reset was requested for your account. If this was you, click the link below to reset:
+
+https://schoolportal.net/reset-password
+
+If this wasn’t you, please secure your account now!
+
+Thank you, 
+School Helpdesk`,
+    threats: [
+      { id: "spoofed-sender", type: "Spoofed Sender", description: "Sender address isn't the real school portal." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Link tries to collect login credentials." },
+      { id: "urgency", type: "False Urgency", description: "Creates panic about account safety." }
+    ],
+    points: 25
+  },
+  {
+    id: 7,
+    from: "events@freeconcert.com",
+    subject: "Win Free Tickets to the Hottest Concert!",
+    date: "2025-01-11 1:00 PM",
+    content: `Hey there,
+
+You're invited to win free tickets to this year's biggest concert! Click below to participate:
+
+https://freeconcert.com/win-tickets
+
+Hurry, only a few spots left!
+
+Cheers, 
+Event Team`,
+    threats: [
+      { id: "too-good", type: "Too Good To Be True", description: "Offering something valuable for free." },
+      { id: "urgency", type: "False Urgency", description: "Says spots are limited to create panic." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Redirects to a fake website." }
+    ],
+    points: 20
+  },
+  {
+    id: 8,
+    from: "friend@gamegiveaway.com",
+    subject: "Friend Sent You a Gift Card!",
+    date: "2025-01-10 5:00 PM",
+    content: `Hi there,
+
+Your friend sent you a $50 gift card. Redeem it here:
+
+https://gamegiveaway.com/redeem-card
+
+Don't wait! Claim before it expires.
+
+Best regards, 
+Game Giveaway`,
+    threats: [
+      { id: "fake-sender", type: "Fake Sender", description: "Pretending to be someone you know." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Leads to a fake page asking for info." },
+      { id: "urgency", type: "False Urgency", description: "Tries to make you act quickly." }
+    ],
+    points: 20
+  },
+  {
+    id: 9,
+    from: "delivery@packagetrack.com",
+    subject: "Your Package is Delayed!",
+    date: "2025-01-10 8:15 AM",
+    content: `Dear Customer,
+
+Your package delivery is delayed. Track your package now by clicking the link below:
+
+https://packagetrack.com/delivery-status
+
+We're sorry for any inconvenience caused.
+
+Thank you, 
+Delivery Team`,
+    threats: [
+      { id: "suspicious-link", type: "Suspicious Link", description: "Link mimics a real tracking service." },
+      { id: "spoofed-sender", type: "Spoofed Sender", description: "Pretends to be a real delivery service." },
+      { id: "urgency", type: "False Urgency", description: "Pushes for immediate action." }
+    ],
+    points: 25
+  },
+  {
+    id: 10,
+    from: "updates@schoolapp.co",
+    subject: "Your Grades Have Been Updated!",
+    date: "2025-01-09 9:30 PM",
+    content: `Dear Student,
+
+Your grades have been updated. Click below to view your progress:
+
+https://schoolapp.co/view-grades
+
+Best regards, 
+School Updates`,
+    threats: [
+      { id: "spoofed-sender", type: "Spoofed Sender", description: "Fake sender mimicking a school portal." },
+      { id: "suspicious-link", type: "Suspicious Link", description: "Tries to steal login credentials." },
+      { id: "urgency", type: "False Urgency", description: "Creates a false need to check immediately." }
+    ],
+    points: 30
   }
 ];
 
+type PhishingSchema = {
+  id: string;
+  field_agent_id: string | null;
+  student_id: string;
+  total_score: number | null;
+  score:number | null;
+  total_emails: number;
+  completed: boolean;
+  started_at: string;
+  completed_at: string | null;
+  last_activity: string;
+};
+
 const PhishingGame = () => {
+  const router = useRouter();
+  const params = useSearchParams();
+  const supabase = createClientComponentClient();
   const [currentEmail, setCurrentEmail] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const [identifiedThreats, setIdentifiedThreats] = useState<string[]>([]);
   const [showDialog, setShowDialog] = useState<boolean>(false);
   const [gameComplete, setGameComplete] = useState<boolean>(false);
   const [selectedText, setSelectedText] = useState<string>('');
+  const totalPoints = phishingEmails.reduce((sum, email) => sum + email.points, 0);
+  const [userId, setUserId] = useState<string | null>(null);
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+  const [progressRecord, setProgressRecord] = useState<PhishingSchema | null>(null);
+  const [phishingCompleted, setIsphishingCompleted] = useState<boolean>(false);
+
+
+
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -104,10 +301,15 @@ const PhishingGame = () => {
   };
 
   const handleThreatIdentification = (threatId: string) => {
+
+    const email = phishingEmails[currentEmail];
+    const threat = email.threats.find(t => t.id === threatId);
+
     if (!identifiedThreats.includes(threatId)) {
+      // Correct identification
       setIdentifiedThreats([...identifiedThreats, threatId]);
-      setScore(score + 10);
-    }
+      setScore(prevScore => prevScore + (threat ? Math.ceil(email.points / email.threats.length) : 10));
+    } 
   };
 
   const handleNextEmail = () => {
@@ -120,6 +322,147 @@ const PhishingGame = () => {
   };
 
   const email = phishingEmails[currentEmail];
+
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
+
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+      const { data: computerBasicsData, error: computerBasicsError } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+
+      if (computerBasicsError || !computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      const { data: internet_safetyData, error: internet_safetyError } = await supabase
+        .from('internet_safety')
+        .select('id')
+        .eq('computer_basics_id', computerBasicsData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (internet_safetyError || !internet_safetyData) {
+        router.push(`/Module_1/Computer_Basics/Internet_Safety/Rookie_Agent/passwords?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      let { data: questData, error:questError } = await supabase
+        .from('field_agent')
+        .select('id')
+        .eq('internet_safety_id', internet_safetyData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (questError || !questData) {
+        router.push(`/Module_1/Computer_Basics/Internet_Safety/Field_Samurai/Antivirus?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      const { data: existingRecord } = await supabase
+        .from('phishing')
+        .select('*')
+        .eq('field_agent_id', questData?.id)
+        .eq('student_id', studentId)
+        .single();
+
+      if (existingRecord) {
+        setProgressRecord(existingRecord);
+      } else {
+        const { data: newRecord, error: insertError } = await supabase
+          .from('phishing')
+          .insert([{
+            field_agent_id: questData?.id,
+            student_id: studentId,
+            total_score: totalPoints,
+            score:null,
+            total_emails: 10,
+            completed: false,
+            started_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (newRecord) {
+          setProgressRecord(newRecord);
+        }
+      }
+    } catch (error) {
+      console.log('Error in initializeProgressRecord:', error);
+    }
+  };
+
+  const updateProgress = async () => {
+    if (!progressRecord || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('phishing')
+        .update({
+          completed: true,
+          last_activity: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', progressRecord.id);
+
+      if (error) throw error;
+
+      setIsphishingCompleted(true);
+    } catch (error) {
+      console.log('Error updating progress:', error);
+    }
+  };
+  
+  useEffect(() => {
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: phishingData, error } = await supabase
+          .from('phishing')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (phishingData?.completed) {
+          setIsphishingCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+
+    
+
+    if(Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      console.log("Decrypted userId:", decryptedId);
+      setUserId(decryptedId);
+      checkCompletion(decryptedId);
+      if (!phishingCompleted) {
+        initializeProgressRecord(decryptedId);
+      }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`)
+    }
+  },[userId])
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
@@ -234,11 +577,8 @@ const PhishingGame = () => {
             <DialogHeader>
               <DialogTitle>Training Complete!</DialogTitle>
             </DialogHeader>
-            <DialogDescription>
-              Final Score: {score} points
-            </DialogDescription>
             <p>You&apos;ve successfully completed the phishing email detection training.</p>
-            <Button onClick={() => window.location.reload()}>
+            <Button onClick={updateProgress}>
               Start New Training
             </Button>
           </DialogContent>
@@ -248,4 +588,18 @@ const PhishingGame = () => {
   );
 };
 
-export default PhishingGame;
+
+
+const PhishingGameApp = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <PhishingGame />
+    </Suspense>
+  );
+};
+
+export default PhishingGameApp;
