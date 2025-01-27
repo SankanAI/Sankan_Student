@@ -20,11 +20,11 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from "js-cookie";
 
-interface Threat {
-  id: string;
-  type: string;
-  description: string;
-}
+// interface Threat {
+//   id: string;
+//   type: string;
+//   description: string;
+// }
 
 const phishingEmails = [
   {
