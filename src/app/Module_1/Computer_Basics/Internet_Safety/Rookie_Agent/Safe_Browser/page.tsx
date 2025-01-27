@@ -60,15 +60,15 @@ const SafeBrowserSimulator: React.FC = () => {
   const [showSecurityAlert, setShowSecurityAlert] = useState<boolean>(false);
   const [securityMessage, setSecurityMessage] = useState<string>('');
   const [countSite, setCountSite]=useState<number>(0);
-  const [normalSite, setnormalSite] = useState<boolean>(false);
-  const [phishing, setPhishing] = useState<boolean>(false);
-  const [otpVerification, setOtpVerification] = useState<boolean>(false);
-  const [downloadWarning, setDownloadWarning] = useState<boolean>(false);
-  const [socialClone, setSocialClone] = useState<boolean>(false);
-  const [cryptoScam, setCryptoScam] = useState<boolean>(false);
-  const [publicWifiRisk, setPublicWifiRisk] = useState<boolean>(false);
-  const [dataCollectionWarning, setDataCollectionWarning] = useState<boolean>(false);
-  const [adwarePopup, setAdwarePopup] = useState<boolean>(false);
+  // const [normalSite, setnormalSite] = useState<boolean>(false);
+  // const [phishing, setPhishing] = useState<boolean>(false);
+  // const [otpVerification, setOtpVerification] = useState<boolean>(false);
+  // const [downloadWarning, setDownloadWarning] = useState<boolean>(false);
+  // const [socialClone, setSocialClone] = useState<boolean>(false);
+  // const [cryptoScam, setCryptoScam] = useState<boolean>(false);
+  // const [publicWifiRisk, setPublicWifiRisk] = useState<boolean>(false);
+  // const [dataCollectionWarning, setDataCollectionWarning] = useState<boolean>(false);
+  // const [adwarePopup, setAdwarePopup] = useState<boolean>(false);
 
   // Sample websites database
   const websites: Website[] = [

@@ -319,7 +319,7 @@ const FirewallTraining: React.FC = () => {
         return;
       }
 
-      let { data: questData, error:questError } = await supabase
+      const { data: questData, error:questError } = await supabase
         .from('field_agent')
         .select('id')
         .eq('internet_safety_id', internet_safetyData?.id)

@@ -26,16 +26,6 @@ interface Threat {
   description: string;
 }
 
-interface PhishingEmail {
-  id: number;
-  from: string;
-  subject: string;
-  date: string;
-  content: string;
-  threats: Threat[];
-  points: number;
-}
-
 const phishingEmails = [
   {
     id: 1,
@@ -361,7 +351,7 @@ const PhishingGame = () => {
         return;
       }
 
-      let { data: questData, error:questError } = await supabase
+      const { data: questData, error:questError } = await supabase
         .from('field_agent')
         .select('id')
         .eq('internet_safety_id', internet_safetyData?.id)

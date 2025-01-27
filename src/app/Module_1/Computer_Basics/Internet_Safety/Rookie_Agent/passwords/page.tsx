@@ -104,7 +104,7 @@ const PasswordSamurai: React.FC = () => {
   const initializeProgressRecord = async (studentId: string) => {
     try {
       // Check for existing computer_basics record
-      let { data: computerBasicsData } = await supabase
+      const { data: computerBasicsData } = await supabase
         .from('computer_basics')
         .select('id')
         .eq('student_id', studentId)
@@ -163,7 +163,7 @@ const PasswordSamurai: React.FC = () => {
       }
   
       // Check or initialize password record
-      let { data: passwordData } = await supabase
+      const { data: passwordData } = await supabase
         .from('password')
         .select('*')
         .eq('student_id', studentId)
@@ -184,7 +184,6 @@ const PasswordSamurai: React.FC = () => {
           }])
           .select()
           .single();
-  6
         if (passwordError) throw passwordError;
         if(newPassword){
           setProgressRecord(newPassword);
