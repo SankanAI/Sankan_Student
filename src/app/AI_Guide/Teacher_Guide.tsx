@@ -1,13 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Volume2, VolumeX, Mic, MicOff } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -15,286 +10,308 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mic, MicOff, Send, Loader2} from 'lucide-react';
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import Audio_Ripple from "@/app/AI_Guide/Audio_Ripple"
 
-// Web Speech API Types
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
+// Language configuration
+const LANGUAGES = {
+  'en-US': { name: 'English', code: 'en' },
+  'kn-IN': { name: 'ಕನ್ನಡ (Kannada)', code: 'kn' },
+  'ta-IN': { name: 'தமிழ் (Tamil)', code: 'ta' },
+  'hi-IN': { name: 'हिंदी (Hindi)', code: 'hi' }
+};
+
+// Add interface for component props
+interface ChatFormProps {
+  contextPrefix: string; // The context to prepend to user queries
 }
 
-interface SpeechRecognitionResultList {
-  readonly length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  readonly length: number;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-  isFinal?: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-  readonly transcript: string;
-  readonly confidence: number;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-  onerror: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onend: ((this: SpeechRecognition) => void) | null;
-  start(): void;
-  stop(): void;
-}
-
-interface SpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-    onerror: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onend: ((this: SpeechRecognition) => void) | null;
-    start(): void;
-    stop(): void;
-}
-
-interface SpeechRecognitionConstructor {
-    new(): SpeechRecognition;
-}
-
-declare global {
-    interface Window {
-        SpeechRecognition: SpeechRecognitionConstructor;
-        webkitSpeechRecognition: SpeechRecognitionConstructor;
-    }
-}
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-interface TeacherGuideProps {
-  context: string;
-  pageId: string;
-}
-
-const TeacherGuide: React.FC<TeacherGuideProps> = ({ context, pageId }) => {
-  const [isListening, setIsListening] = useState<boolean>(false);
-  const [userInput, setUserInput] = useState<string>('');
-  const [response, setResponse] = useState<string>('');
-  const [selectedLanguage, setSelectedLanguage] = useState('english');
-  const [isLoading, setIsLoading] = useState(false);
+export default function ChatForm({ contextPrefix }: ChatFormProps) {
+  const [query, setQuery] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en-US');
   const [error, setError] = useState<string | null>(null);
-  const [chatHistory, setChatHistory] = useState<Array<{question: string, answer: string}>>([]);
-
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
+  const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  
+  const recognitionRef = useRef<any>(null);
 
   // Initialize speech synthesis and recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Initialize speech synthesis
-      speechRef.current = new SpeechSynthesisUtterance();
-      speechRef.current.lang = selectedLanguage === 'hindi' ? 'hi-IN' : 'en-US';
-
-      // Initialize speech recognition
+      setSpeechSynthesis(window.speechSynthesis);
+      
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = selectedLanguage === 'hindi' ? 'hi-IN' : 'en-US';
-
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0][0].transcript;
-          setUserInput(transcript);
-        };
-
-        recognition.onerror = (event: Event) => {
-          setError('Speech recognition error occurred');
-          console.log(event)
-          setIsListening(false);
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
       }
     }
+  }, []);
 
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = selectedLanguage;
+    }
+  }, [selectedLanguage]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      setError('Speech recognition is not supported in your browser.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      setError(null);
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setQuery(transcript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.log('Speech recognition error:', event.error);
+        setError('Error recognizing speech. Please try again.');
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const handleSpeak = () => {
+    setError('');
+    if (!speechSynthesis || !answer) return;
+
+    if (isPlaying) {
+      speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+
+    const newUtterance = new SpeechSynthesisUtterance(answer);
+    newUtterance.lang = selectedLanguage;
+    newUtterance.rate = 1;
+    newUtterance.pitch = 1;
+    
+    newUtterance.onend = () => {
+      setIsPlaying(false);
+    };
+
+    newUtterance.onerror = () => {
+      if(isPlaying){setError('Error playing speech. Please try again.');}
+      setIsPlaying(false);
+    };
+
+    setUtterance(newUtterance);
+    setIsPlaying(true);
+    speechSynthesis.speak(newUtterance);
+  };
+
+  useEffect(() => {
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      if (speechSynthesis) {
+        speechSynthesis.cancel();
       }
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
     };
-  }, [selectedLanguage]);
+  }, [speechSynthesis]);
 
-  // Speech synthesis function
-  const speak = useCallback((text: string) => {
-    if (speechRef.current && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      speechRef.current.text = text;
-      console.log(pageId, response)
-      speechRef.current.lang = selectedLanguage === 'hindi' ? 'hi-IN' : 'en-US';
-      window.speechSynthesis.speak(speechRef.current);
-    }
-  }, [selectedLanguage]);
+  const translateText = async (text: string, from: string, to: string) => {
+    try {
+      const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${process.env.NEXT_PUBLIC_GOOGLE_TRANSLATE_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: text,
+          source: from,
+          target: to,
+        }),
+      });
 
-  // Toggle speech recognition
-  const toggleListening = () => {
-    if (!isListening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.start();
-        setIsListening(true);
-        setError(null);
-        speak('Listening for your question');
-      } else {
-        setError('Speech recognition not supported in this browser');
+      if (!response.ok) {
+        throw new Error('Translation failed');
       }
-    } else {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsListening(false);
+
+      const data = await response.json();
+      return data.data.translations[0].translatedText;
+    } catch (error) {
+      console.log('Translation error:', error);
+      throw error;
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (speechSynthesis && isPlaying) {
+      speechSynthesis.cancel();
+      setIsPlaying(false);
+    }
+
     try {
-      setIsLoading(true);
-      setError(null);
+      // Combine context with user query
+      const fullQuery = `${contextPrefix} ${query}`.trim();
+      
+      // Translate combined query to English if not already in English
+      let englishQuery = fullQuery;
+      if (selectedLanguage !== 'en-US') {
+        englishQuery = await translateText(
+          fullQuery,
+          LANGUAGES[selectedLanguage as keyof typeof LANGUAGES].code,
+          'en'
+        );
+      }
 
-      // Prepare conversation context
-      const conversationContext = `
-        Page Context: ${context}
-        Previous Conversations: ${chatHistory.map(chat => 
-          `Q: ${chat.question}\nA: ${chat.answer}`).join('\n')}
-        Current Question: ${userInput}
-      `;
-
-      // Get response from Supabase Edge Function
-      const { data: { answer }, error } = await supabase.functions.invoke('get-ai-response', {
-        body: { context: conversationContext }
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          queryEmbedding: [],
+          query: englishQuery
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
-      // Update state and save to history
-      setResponse(answer);
-      setChatHistory(prev => [...prev, { question: userInput, answer }]);
+      const data = await response.json();
+      
+      // Translate answer back to selected language if not English
+      let translatedAnswer = data.answer;
+      if (selectedLanguage !== 'en-US') {
+        translatedAnswer = await translateText(
+          data.answer,
+          'en',
+          LANGUAGES[selectedLanguage as keyof typeof LANGUAGES].code
+        );
+      }
 
-      // Speak response
-      speak(answer);
-
+      setAnswer(translatedAnswer);
     } catch (error) {
-      setError('Failed to get response. Please try again.');
-      console.log('Error:', error);
+      console.error('Error:', error);
+      setError('An error occurred while processing your request.');
+      setAnswer('');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <div 
-          className="fixed bottom-4 right-4 shadow-lg hover:shadow-xl transition-shadow rounded-3xl overflow-hidden"
-        >
-          <Audio_Ripple/>
-        </div>
-      </DialogTrigger>
+    <div className="space-y-6">
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6 text-red-600">
+            {error}
+          </CardContent>
+        </Card>
+      )}
+
+      {answer && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex justify-between items-center">
+              Answer
+              <Button
+                onClick={handleSpeak}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title={isPlaying ? 'Stop speaking' : 'Speak answer'}
+              >
+                {isPlaying ? (
+                  <VolumeX className="h-5 w-5" />
+                ) : (
+                  <Volume2 className="h-5 w-5" />
+                )}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose max-w-none">
+              {answer}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Your AI Teaching Assistant</DialogTitle>
-        </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="flex gap-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            Educational Apps Assistant
             <Select
               value={selectedLanguage}
               onValueChange={setSelectedLanguage}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Language" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="english">English</SelectItem>
-                <SelectItem value="hindi">Hindi</SelectItem>
+                {Object.entries(LANGUAGES).map(([key, value]) => (
+                  <SelectItem key={key} value={key}>
+                    {value.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleListening}
-              className={`flex-shrink-0 ${isListening ? 'bg-red-100' : ''}`}
-            >
-              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {chatHistory.map((chat, index) => (
-              <div key={index} className="space-y-2">
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <p className="font-medium">Q: {chat.question}</p>
-                </div>
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p>A: {chat.answer}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <textarea
-              className="flex-1 p-3 border rounded-md min-h-[100px] resize-none"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Ask your question..."
-              rows={3}
-            />
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <Textarea
+                placeholder="Ask about Mouse Event Training or Typing Triumph applications..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="min-h-32 pr-12"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-2"
+                onClick={toggleListening}
+              >
+                {isListening ? (
+                  <MicOff className="h-5 w-5 text-red-500" />
+                ) : (
+                  <Mic className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
             <Button 
-              onClick={handleSubmit} 
-              disabled={isLoading || !userInput.trim()}
+              type="submit" 
+              disabled={loading || !query.trim()}
               className="w-full"
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
-                <>
-                  Ask Question <Send className="ml-2 h-4 w-4" />
-                </>
+                'Ask Question'
               )}
             </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
-};
-
-export default TeacherGuide;
+}

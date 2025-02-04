@@ -7,8 +7,243 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle,DialogFooter } from "@/components/ui/dialog";
 import Cookies from "js-cookie";
+import { Volume2, VolumeX, ChevronRight, ChevronLeft } from "lucide-react";
+import ChatForm from '@/app/AI_Guide/Teacher_Guide';
+import { RightSidebar } from '@/components/ui/sidebar';
+
+interface IntroDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface Step {
+  title: string;
+  content: string | string[];
+  speech: string;
+}
+
+const steps: Step[] = [
+  {
+    title: "Welcome to Typing Triumph!",
+    content: "This game will help you master keyboard skills essential for coding. Let's go through each level.",
+    speech: "Welcome to Typing Triumph! This game will help you master keyboard skills essential for coding. Let's go through each level."
+  },
+  {
+    title: "Level 1: Basic Characters",
+    content: [
+      "Practice typing basic letters and numbers",
+      "Score 12 points in 20 seconds to advance",
+      "Get comfortable with key locations"
+    ],
+    speech: "In Level 1, you'll practice basic characters. You need to type letters and numbers, scoring 12 points in 20 seconds to advance. This level helps you get comfortable with key locations."
+  },
+  {
+    title: "Level 2: Programming Keywords",
+    content: [
+      "Learn common programming terms and symbols",
+      "Score 30 points in 180 seconds",
+      "Each word comes with an explanation"
+    ],
+    speech: "Level 2 focuses on programming keywords. You'll learn common programming terms and symbols. You need to score 30 points in 180 seconds. Each word will come with an explanation to help you learn."
+  },
+  {
+    title: "Level 3: Terminal Commands",
+    content: [
+      "Master common terminal commands and flags",
+      "Score 35 points in 240 seconds",
+      "Learn what each command does"
+    ],
+    speech: "In Level 3, you'll master terminal commands. Your goal is to score 35 points in 240 seconds while learning various commands and flags. Each command comes with an explanation of its purpose."
+  },
+  {
+    title: "Tips for Success",
+    content: [
+      "Type exactly what you see on screen",
+      "Watch your accuracy and timing",
+      "Read the descriptions to learn while you type"
+    ],
+    speech: "Finally, here are some tips for success. Type exactly what you see on screen. Watch your accuracy and timing. And make sure to read the descriptions to learn while you type."
+  }
+];
+
+const IntroDialog: React.FC<IntroDialogProps> = ({ isOpen, onClose }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [autoProgress, setAutoProgress] = useState(false);
+  const [synthesis, setSynthesis] = useState<SpeechSynthesis | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSynthesis(window.speechSynthesis);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (synthesis) {
+        synthesis.cancel();
+      }
+    };
+  }, [synthesis]);
+
+  const handleSpeak = (skipAutoPlay: boolean = false) => {
+    if (!synthesis) return;
+
+    if (isSpeaking) {
+      synthesis.cancel();
+      setIsSpeaking(false);
+      setAutoProgress(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(steps[currentStep].speech);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      if (autoProgress && currentStep < steps.length - 1 && !skipAutoPlay) {
+        setTimeout(() => {
+          setCurrentStep(prev => prev + 1);
+          handleSpeak(true);
+        }, 500);
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setAutoProgress(false);
+    };
+
+    setIsSpeaking(true);
+    synthesis.speak(utterance);
+  };
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      if (synthesis && isSpeaking) {
+        synthesis.cancel();
+      }
+      setCurrentStep(prev => prev + 1);
+      if (autoProgress) {
+        setTimeout(() => handleSpeak(true), 100);
+      }
+    } else {
+      handleClose();
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      if (synthesis && isSpeaking) {
+        synthesis.cancel();
+      }
+      setCurrentStep(prev => prev - 1);
+      if (autoProgress) {
+        setTimeout(() => handleSpeak(true), 100);
+      }
+    }
+  };
+
+  const handleClose = () => {
+    if (synthesis && isSpeaking) {
+      synthesis.cancel();
+    }
+    setIsSpeaking(false);
+    setAutoProgress(false);
+    onClose();
+  };
+
+  const toggleAutoProgress = () => {
+    setAutoProgress(!autoProgress);
+    if (!autoProgress && !isSpeaking) {
+      handleSpeak(false);
+    }
+  };
+
+  const renderContent = (content: string | string[]) => {
+    if (Array.isArray(content)) {
+      return (
+        <ul className="space-y-2">
+          {content.map((item, index) => (
+            <li key={index} className="flex items-center text-gray-600">
+              <span className="mr-2">•</span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    return <p className="text-gray-600">{content}</p>;
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex justify-between items-center text-xl font-bold">
+            <span>Step {currentStep + 1} of {steps.length}</span>
+            <div className="flex gap-2">
+              <Button
+                onClick={toggleAutoProgress}
+                variant="outline"
+                size="sm"
+                className={autoProgress ? "bg-blue-100" : ""}
+              >
+                Auto
+              </Button>
+              <Button
+                onClick={() => handleSpeak(false)}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title={isSpeaking ? 'Stop speaking' : 'Listen'}
+              >
+                {isSpeaking ? (
+                  <VolumeX className="h-5 w-5" />
+                ) : (
+                  <Volume2 className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="my-6">
+          <h3 className="text-lg font-semibold text-blue-600 mb-4">
+            {steps[currentStep].title}
+          </h3>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            {renderContent(steps[currentStep].content)}
+          </div>
+        </div>
+
+        <DialogFooter className="flex justify-between">
+          <div className="flex gap-2">
+            <Button
+              onClick={handlePrev}
+              variant="outline"
+              disabled={currentStep === 0}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              onClick={handleNext}
+            >
+              {currentStep === steps.length - 1 ? 'Start Game' : 'Next'}
+              {currentStep !== steps.length - 1 && <ChevronRight className="h-4 w-4 ml-1" />}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 type GameLevel = {
   id: number;
@@ -217,6 +452,9 @@ function TypingTriumpContent() {
   const [showCongrats, setShowCongrats] = useState(false);
   const [isKeyboardMovementCompleted, setIsKeyboardMovementCompleted] = useState(false);
   const [progressRecord, setProgressRecord] = useState<KeyboardRecord | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [contextPrefix, setcontextPrefix]=useState<string>('');
  
   
   const principalId = params.get('principalId');
@@ -375,9 +613,10 @@ const startTimer = useCallback(() => {
 
 
 useEffect(()=>{
+  setcontextPrefix(`It is Keyboard Application, where User has scored ${level1Score} in first Level, ${level1Score} in second level, ${score} in current Level`)
   const cleanup = startTimer();
   return cleanup;
-},[startTimer])
+},[startTimer, level1Score, level2Score, level3Score ])
 
   const finalSubmit=async(timing:number, scored:number)=>{
     if (!progressRecord || !userId) return;
@@ -475,6 +714,12 @@ useEffect(()=>{
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+      {showIntro && (
+        <IntroDialog
+          isOpen={showIntro}
+          onClose={() => setShowIntro(false)}
+        />
+      )}
       <div className="max-w-2xl mx-auto space-y-4">
         <Card className="p-6">
           <h1 className="text-2xl font-bold text-center mb-2 tracking-tighter">Typing Triumph</h1>
@@ -581,6 +826,19 @@ useEffect(()=>{
          </Card>
         )}
       </div>
+      <button
+        onClick={() => setIsSidebarOpen(true)}
+        className="m-4 px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 rounded-full fixed bottom-10 right-10 transition-colors"
+      >
+        Ask Teacher
+      </button>
+
+      <RightSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      >
+        <ChatForm contextPrefix={contextPrefix}/>
+      </RightSidebar>
     </div>
   );
 }

@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Cookies from "js-cookie";
-import TeacherGuide from "@/app/AI_Guide/Teacher_Guide";
+import ChatForm from '@/app/AI_Guide/Teacher_Guide';
+import { RightSidebar } from '@/components/ui/sidebar';
 
 const EVENTS = {
   click: 'Left Click',
@@ -22,22 +23,22 @@ const INSTRUCTIONS = [
   {
     title: "Left Click",
     description: "Press the left mouse button once to interact with elements.",
-    image: "/api/placeholder/400/300"
+    image: "https://cdn-icons-png.flaticon.com/512/3645/3645905.png"
   },
   {
     title: "Right Click",
     description: "Press the right mouse button to open context menus or perform secondary actions.",
-    image: "/api/placeholder/400/300"
+    image: "https://cdn-icons-png.flaticon.com/512/3645/3645909.png"
   },
   {
     title: "Double Click",
     description: "Quickly press the left mouse button twice to perform special actions.",
-    image: "/api/placeholder/400/300"
+    image: "https://cdn-icons-png.flaticon.com/256/11441/11441315.png"
   },
   {
     title: "Mouse Over",
     description: "Move your cursor over elements to trigger hover effects and interactions.",
-    image: "/api/placeholder/400/300"
+    image: "https://cdn-icons-png.flaticon.com/512/178/178431.png"
   }
 ];
 
@@ -96,6 +97,8 @@ function EnhancedEmojiTrainer() {
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
   const [isMouseMovementCompleted, setIsMouseMovementCompleted] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [contextPrefix, setcontextPrefix]=useState<string>('');
   const initialBubbleCount = 5;
 
   const principalId = params.get('principalId');
@@ -283,13 +286,14 @@ function EnhancedEmojiTrainer() {
   },[userId])
 
   useEffect(() => {
+    setcontextPrefix(`It is Mouse Movement Application, where User has completed ${eventStats.click} Left clicks, ${eventStats.contextmenu} Right Click, ${eventStats.dblclick} Double Clicks,${eventStats.mouseover} Mouse Overs`)
     speechRef.current = new SpeechSynthesisUtterance();
     return () => {
       if (speechRef.current) {
         window.speechSynthesis.cancel();
       }
     };
-  }, []);
+  }, [eventStats, contextPrefix]);
 
   const handleNextLevel = () => {
     updateProgress(eventStats)
@@ -487,7 +491,6 @@ function EnhancedEmojiTrainer() {
 
   return (
     <div ref={containerRef} className="w-full h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-">
-      <TeacherGuide context='Hello world' pageId='hello'/>
        <Dialog open={showCongrats} onOpenChange={setShowCongrats}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -526,7 +529,7 @@ function EnhancedEmojiTrainer() {
               <img
                 src={INSTRUCTIONS[currentInstruction]?.image}
                 alt={INSTRUCTIONS[currentInstruction]?.title}
-                className="w-full h-48 object-cover rounded-lg"
+                className="w-full object-cover rounded-lg"
               />
               <h3 className="text-xl font-bold mt-4">{INSTRUCTIONS[currentInstruction]?.title}</h3>
               <p className="mt-2">{INSTRUCTIONS[currentInstruction]?.description}</p>
@@ -651,6 +654,21 @@ function EnhancedEmojiTrainer() {
           </div>
         </div>
       ))}
+
+       <button
+        onClick={() => setIsSidebarOpen(true)}
+        className="m-4 px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 rounded-full fixed bottom-10 right-10 transition-colors"
+      >
+        Ask Teacher
+      </button>
+
+      <RightSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      >
+        <ChatForm contextPrefix={contextPrefix}/>
+      </RightSidebar>
+
     </div>
   );
 }

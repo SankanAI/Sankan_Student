@@ -33,6 +33,8 @@ import { Progress } from "@/components/ui/progress";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
+import ChatForm from '@/app/AI_Guide/Teacher_Guide';
+import { RightSidebar } from '@/components/ui/sidebar';
 
 
 type FileManagement = {
@@ -273,6 +275,8 @@ const ProjectLearningInterface = () => {
   const router = useRouter();
   const params = useSearchParams();
   const supabase = createClientComponentClient();
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [contextPrefix, setcontextPrefix]=useState<string>('');
 
 
    
@@ -945,6 +949,19 @@ const ProjectLearningInterface = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <button
+        onClick={() => setIsSidebarOpen(true)}
+        className="m-4 px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 rounded-full fixed bottom-10 right-10 transition-colors"
+      >
+        Ask Teacher
+      </button>
+
+      <RightSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      >
+        <ChatForm contextPrefix={contextPrefix}/>
+      </RightSidebar>
     </div>
   );
 };

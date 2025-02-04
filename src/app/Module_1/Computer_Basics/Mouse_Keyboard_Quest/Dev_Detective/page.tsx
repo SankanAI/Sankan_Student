@@ -14,6 +14,8 @@ import {
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
+import ChatForm from '@/app/AI_Guide/Teacher_Guide';
+import { RightSidebar } from '@/components/ui/sidebar';
 
 
 // Type Definitions
@@ -56,6 +58,8 @@ const MathDetectiveContent = () => {
   const [userId, setUserId] = useState('');
   const [progressRecord, setProgressRecord] = useState<DevDetectiveRecord | null>(null);
   const [isDevCompleted, setIsDevCompleted] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [contextPrefix, setcontextPrefix]=useState<string>('');
 
   // Refs
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -111,13 +115,14 @@ const MathDetectiveContent = () => {
 
   // Initialize speech recognition
   useEffect(() => {
+    setcontextPrefix(`It is Dev Detective Application, where User has added First Number ${firstNumber}, Second Number ${secondNumber} and operation ${operation} and it is result ${result}`)
     speechRef.current = new SpeechSynthesisUtterance();
     return () => {
       if (speechRef.current) {
         window.speechSynthesis.cancel();
       }
     };
-  }, []);
+  }, [firstNumber, secondNumber, operation, result]);
 
   const initializeUser =async (decryptedId: string) => {
     try {
@@ -529,6 +534,19 @@ print(c)  # Result: ${result}`;
           </DialogContent>
         </Dialog>
       </div>
+      <button
+        onClick={() => setIsSidebarOpen(true)}
+        className="m-4 px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 rounded-full fixed bottom-10 right-10 transition-colors"
+      >
+        Ask Teacher
+      </button>
+
+      <RightSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      >
+        <ChatForm contextPrefix={contextPrefix}/>
+      </RightSidebar>
     </div>
   );
 };

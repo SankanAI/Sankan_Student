@@ -36,11 +36,11 @@ export const Timeline = ({ data, name }: { data: TimelineEntry[], name:string })
       className="w-full bg-white dark:bg-neutral-950 tracking-tight md:px-10"
       ref={containerRef}
     >
-      <div className="max-w-7xl mx-auto py-20 px-4 md:px-8 lg:px-10">
-        <h2 className="text-lg md:text-4xl mb-4 text-black dark:text-white max-w-4xl">
+      <div className="max-w-7xl mt-5 mx-auto rounded-3xl py-20 px-4 md:px-8 lg:px-10" style={{background:'url(https://cdn.leonardo.ai/users/320dde95-a0ce-47af-a4ce-4704a05cd499/generations/075163f0-2c8a-4457-90bc-f029cf21c90d/AlbedoBase_XL_Hey_Create_Pencil_and_Pen_scale_triangle_and_oth_1.jpg)', backgroundSize:'100%', backgroundPosition:'0% 5%'}}>
+        <h2 className="text-lg md:text-5xl mb-4 text-white font-bold dark:text-white max-w-4xl tracking-tighter">
           Your Journey in {name}
         </h2>
-        <p className="text-neutral-700 dark:text-neutral-300 text-sm md:text-base max-w-sm">
+        <p className="text-white dark:text-neutral-300 text-sm md:text-base max-w-sm">
           You came a long way, Keep going to revive Sankan Kingdom
         </p>
       </div>
