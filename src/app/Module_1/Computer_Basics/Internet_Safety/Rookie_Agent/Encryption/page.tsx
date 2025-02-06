@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, Suspense } from "react";
+import React, { useState, useCallback, Suspense, useEffect } from "react";
 import { 
   Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter 
 } from "@/components/ui/card";
@@ -9,8 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-    ShieldCheck, Key, Lock, Link, Atom, Eye,  Swords, Fingerprint, Crown
+  ShieldCheck, Key, Lock, Link, Atom, Eye, Swords, Fingerprint, Crown
 } from "lucide-react";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Cookies from "js-cookie";
+
 
 // Define types for modules and challenges
 type Challenge = {
@@ -42,12 +46,15 @@ type Module = {
   game: Game;
 };
 
-// Define props for functional components if needed
-// type ModuleCardProps = {
-//   module: Module;
-//   progress: number;
-//   onClick: () => void;
-// };
+interface Encryption {
+  id: string; // UUID
+  rookieAgentId?: string; // Optional UUID foreign key
+  studentId: string; // UUID
+  completed: boolean;
+  startedAt: Date;
+  completedAt?: string;
+  lastActivity: string;
+}
 
 const modules: Module[] = [
     {
@@ -830,43 +837,172 @@ const modules: Module[] = [
       }
                                     
   ]
-
 const EncryptionLearningPortal: React.FC = () => {
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+  const router = useRouter();
+  const params = useSearchParams();
   const [showDialog, setShowDialog] = useState(false);
-  const [progress, setProgress] = useState<Record<string, number>>({});
   const [currentChallenge, setCurrentChallenge] = useState(0);
-  const [quizResults, setQuizResults] = useState<{
-    [moduleId: string]: {
-      totalQuestions: number;
-      correctAnswers: number;
-      incorrectAnswers: number;
-      completed: boolean;
-    }
-  }>({});
   const [challengeResult, setChallengeResult] = useState<{
     isCorrect: boolean | null;
     explanation: string;
   }>({ isCorrect: null, explanation: "" });
+  const supabase = createClientComponentClient();
+  const [userId, setUserId] = useState<string>('');
+  const principalId = params.get('principalId');
+  const schoolId = params.get('schoolId');
+  const teacherId = params.get('teacherId');
+  const [IsEncryptionCompleted, setIsEncryptionCompleted]=useState<boolean>(false);
+  const [ProgressRecord, setProgressRecord]=useState<Encryption| null>(null);
+  
+  // New state for progress tracking
+  const [moduleProgress, setModuleProgress] = useState<{
+    [moduleId: string]: {
+      progress: number;
+      currentQuestion: number;
+      totalQuestions: number;
+      correctAnswers: number;
+      incorrectAnswers: number;
+      lastAttempted: string;
+    }
+  }>({});
+
+  
+
+  const UpdateProgress=()=>{
+    const KeysSubject=Object.keys(moduleProgress);
+    if(KeysSubject.length==10){
+      let Completed=false;
+      KeysSubject.forEach(function(element) {
+        let res=moduleProgress[element]["totalQuestions"]- moduleProgress[element]["correctAnswers"]
+        if(res>5){ Completed=false; console.log(`${element} is not yet Completed`)}
+        else{ Completed=true; finalSubmit()}
+      });
+    }
+    else{
+      console.log(moduleProgress)
+      console.log("Complete all Modules");
+    }
+  }
+
+
+  
+  const finalSubmit=async()=>{
+    if (!ProgressRecord || !userId) return;
+    
+    const updates: Partial<Encryption> = {
+      completed: true,
+      completedAt:new Date().toISOString(),
+      lastActivity: new Date().toISOString()
+    };
+
+    try {
+      const { error } = await supabase
+        .from('encryption')
+        .update(updates)
+        .eq('id', ProgressRecord.id)
+        .eq('rookie_agent_id',ProgressRecord.rookieAgentId)
+
+      if (error) throw error;
+    } catch (error) {
+      console.log('Error updating progress:', error);
+  }
+}
+  
+
+  const decryptData = (encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  };
+
+  const initializeProgressRecord = async (studentId: string) => {
+    try {
+      // Check for existing computer_basics record
+      const { data: computerBasicsData } = await supabase
+        .from('computer_basics')
+        .select('id')
+        .eq('student_id', studentId)
+        .single();
+  
+      // Create computer_basics record if it doesn't exist
+      if (!computerBasicsData) {
+        router.push(`/Module_1/Computer_Basics/Mouse_Keyboard_Quest/Mouse_Movement?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+
+      // Initialize or check existing rookie_agent record
+      let { data: rookieAgentData } = await supabase
+        .from('rookie_agent')
+        .select('*')
+        .eq('student_id', studentId)
+        .single();
+  
+      if (!rookieAgentData) {
+        router.push(`/Module_1/Computer_Basics/Internet_Safety/Rookie_Agent?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        return;
+      }
+  
+      // Check or initialize encryption record
+      const { data: encryptionData } = await supabase
+        .from('encryption')
+        .select('*')
+        .eq('student_id', studentId)
+        .single();
+
+      if(encryptionData){
+        setProgressRecord(encryptionData);
+      }
+      else {
+        const { data: encryptionData, error: encryptionError } = await supabase
+          .from('encryption')
+          .insert([{
+            rookie_agent_id: rookieAgentData.id,
+            student_id: studentId,
+            completed: false,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          }])
+          .select()
+          .single();
+        if (encryptionError) throw encryptionError;
+        if(encryptionData){
+          setProgressRecord(encryptionData);
+        }
+      }
+    } catch (error) {
+      console.log('Error initializing progress record:', error);
+    }
+  };
 
   const handleModuleClick = (module: Module) => {
     setSelectedModule(module);
     setShowDialog(true);
-    setCurrentChallenge(0);
-    setChallengeResult({ isCorrect: null, explanation: "" });
-
-    // Initialize quiz results for this module if not exists
-    if (!quizResults[module.id]) {
-      setQuizResults(prev => ({
+    
+    // Initialize or load module progress
+    if (!moduleProgress[module.id]) {
+      setModuleProgress(prev => ({
         ...prev,
         [module.id]: {
+          progress: 0,
+          currentQuestion: 0,
           totalQuestions: module.game.challenges.length,
           correctAnswers: 0,
           incorrectAnswers: 0,
-          completed: false
+          lastAttempted: new Date().toISOString()
         }
       }));
     }
+    
+    setCurrentChallenge(moduleProgress[module.id]?.currentQuestion || 0);
+    setChallengeResult({ isCorrect: null, explanation: "" });
   };
 
   const handleAnswerSubmit = useCallback((moduleId: string, selectedIndex: number) => {
@@ -875,95 +1011,98 @@ const EncryptionLearningPortal: React.FC = () => {
     const currentChal = selectedModule.game.challenges[currentChallenge];
     const isCorrect = selectedIndex === currentChal.correct;
 
-    // Update quiz results
-    setQuizResults(prev => {
-      const moduleResults = prev[moduleId] || {
+    // Update progress
+    setModuleProgress(prev => {
+      const moduleStats = prev[moduleId] || {
+        progress: 0,
+        currentQuestion: 0,
         totalQuestions: selectedModule.game.challenges.length,
         correctAnswers: 0,
         incorrectAnswers: 0,
-        completed: false
+        lastAttempted: new Date().toISOString()
       };
 
       return {
         ...prev,
         [moduleId]: {
-          ...moduleResults,
-          correctAnswers: isCorrect 
-            ? moduleResults.correctAnswers + 1 
-            : moduleResults.correctAnswers,
-          incorrectAnswers: !isCorrect 
-            ? moduleResults.incorrectAnswers + 1 
-            : moduleResults.incorrectAnswers,
-          completed: currentChallenge + 1 === selectedModule.game.challenges.length
+          ...moduleStats,
+          correctAnswers: isCorrect ? moduleStats.correctAnswers + 1 : moduleStats.correctAnswers,
+          incorrectAnswers: !isCorrect ? moduleStats.incorrectAnswers + 1 : moduleStats.incorrectAnswers,
+          currentQuestion: currentChallenge + 1,
+          progress: Math.round(((currentChallenge + 1) / selectedModule.game.challenges.length) * 100),
+          lastAttempted: new Date().toISOString()
         }
       };
     });
 
-    // Set challenge result for explanation
     setChallengeResult({
       isCorrect,
       explanation: currentChal.explanation
     });
 
-    // Update progress if correct
-    if (isCorrect) {
-      setProgress((prev) => ({
-        ...prev,
-        [moduleId]: Math.min((prev[moduleId] || 0) + 33, 100)
-      }));
-    }
-
-    // Move to next challenge after a short delay
+    // Move to next challenge after delay
     setTimeout(() => {
       if (currentChallenge + 1 < selectedModule.game.challenges.length) {
         setCurrentChallenge(prev => prev + 1);
         setChallengeResult({ isCorrect: null, explanation: "" });
-      } else {
-        // Complete module if all challenges are done
-        setProgress((prev) => ({
-          ...prev,
-          [moduleId]: 100
-        }));
       }
     }, 2000);
   }, [selectedModule, currentChallenge]);
 
-  // Function to render quiz results
-  const renderQuizResults = (moduleId: string) => {
-    const results = quizResults[moduleId];
-    if (!results) return null;
+  useEffect(() => {
+    const checkCompletion = async (decryptedId: string) => {
+      try {
+        const { data: encryptionData, error } = await supabase
+          .from('encryption')
+          .select('completed')
+          .eq('student_id', decryptedId)
+          .single();
+
+        if (error) throw error;
+        
+        if (encryptionData?.completed) {
+          setIsEncryptionCompleted(true);
+          router.push(`/Module_1/Computer_Basics/Internet_Safety/Rookie_Agent?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+        }
+      } catch (error) {
+        console.log('Error checking completion status:', error);
+      }
+    };
+   
+    if (Cookies.get('userId')) {
+      const decryptedId = decryptData(Cookies.get('userId')!);
+      setUserId(decryptedId);
+      checkCompletion(userId)
+      if(!IsEncryptionCompleted){ initializeProgressRecord(decryptedId); }
+    } else {
+      router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
+    }
+  }, [userId]);
+
+  const renderProgressIndicator = (moduleId: string) => {
+    const stats = moduleProgress[moduleId];
+    if (!stats) return null;
 
     return (
-      <div className="mt-4 p-4 bg-gray-100 rounded-lg">
-        <h3 className="text-xl font-bold mb-2">Quiz Results</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <p className="font-semibold">Total Questions</p>
-            <p className="text-2xl">{results.totalQuestions}</p>
-          </div>
-          <div className="text-center">
-            <p className="font-semibold text-green-600">Correct Answers</p>
-            <p className="text-2xl text-green-700">{results.correctAnswers}</p>
-          </div>
-          <div className="text-center">
-            <p className="font-semibold text-red-600">Incorrect Answers</p>
-            <p className="text-2xl text-red-700">{results.incorrectAnswers}</p>
-          </div>
-        </div>
-        <div className="mt-4 text-center">
-          <Badge 
-            variant={results.completed ? "default" : "outline"}
-            className={results.completed ? "bg-green-500 text-white" : ""}
-          >
-            {results.completed ? "Completed" : "Not Completed"}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <Badge variant="outline">
+            Question {stats.currentQuestion} of {stats.totalQuestions}
+          </Badge>
+          <Badge variant="outline" className="bg-green-100">
+            Correct: {stats.correctAnswers}
+          </Badge>
+          <Badge variant="outline" className="bg-red-100">
+            Incorrect: {stats.incorrectAnswers}
           </Badge>
         </div>
+        <Progress value={stats.progress} className="w-full" />
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen  p-8">
+    <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-bold text-amber-900 mb-4 tracking-tighter">
@@ -985,14 +1124,22 @@ const EncryptionLearningPortal: React.FC = () => {
                 <div className="flex items-center justify-between">
                   {module.icon}
                   <Badge variant="outline">
-                    {progress[module.id] || 0}% Complete
+                    {moduleProgress[module.id]?.progress || 0}% Complete
                   </Badge>
                 </div>
                 <CardTitle className="text-xl mt-2">{module.title}</CardTitle>
                 <CardDescription>{module.description}</CardDescription>
               </CardHeader>
               <CardFooter>
-                <Progress value={progress[module.id] || 0} className="w-full" />
+                <div className="w-full space-y-2">
+                  <Progress value={moduleProgress[module.id]?.progress || 0} className="w-full" />
+                  {moduleProgress[module.id] && (
+                    <div className="text-sm text-gray-600">
+                      Correct: {moduleProgress[module.id].correctAnswers} / 
+                      Total: {moduleProgress[module.id].totalQuestions}
+                    </div>
+                  )}
+                </div>
               </CardFooter>
             </Card>
           ))}
@@ -1031,9 +1178,9 @@ const EncryptionLearningPortal: React.FC = () => {
 
                           <div className="bg-green-50 p-4 rounded-lg">
                             <h3 className="font-bold mb-2">Example</h3>
-                            <p className="font-mono whitespace-pre-wrap">
+                            <pre className="font-mono whitespace-pre-wrap">
                               {selectedModule.content.example}
-                            </p>
+                            </pre>
                           </div>
                         </div>
                       </CardContent>
@@ -1041,65 +1188,58 @@ const EncryptionLearningPortal: React.FC = () => {
                   </TabsContent>
 
                   <TabsContent value="practice">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{selectedModule.game.title}</CardTitle>
-                    <CardDescription>
-                      {selectedModule.game.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedModule.game.challenges[currentChallenge] && (
-                      <div className="space-y-4">
-                        <p className="text-lg font-semibold">
-                          {
-                            selectedModule.game.challenges[
-                              currentChallenge
-                            ].question
-                          }
-                        </p>
-                        <div className="grid grid-cols-2 gap-4">
-                          {selectedModule.game.challenges[
-                            currentChallenge
-                          ].options.map((option, idx) => (
-                            <Button
-                              key={idx}
-                              variant="outline"
-                              className="text-lg py-8"
-                              onClick={() => handleAnswerSubmit(selectedModule.id, idx)}
-                              disabled={challengeResult.isCorrect !== null}
-                            >
-                              {option}
-                            </Button>
-                          ))}
-                        </div>
-                        {challengeResult.isCorrect !== null && (
-                          <div className={`p-4 rounded-lg ${challengeResult.isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
-                            <p className="font-semibold">
-                              {challengeResult.isCorrect ? "Correct!" : "Incorrect"}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{selectedModule.game.title}</CardTitle>
+                        <CardDescription>
+                          {selectedModule.game.description}
+                        </CardDescription>
+                        {renderProgressIndicator(selectedModule.id)}
+                      </CardHeader>
+                      <CardContent>
+                        {selectedModule.game.challenges[currentChallenge] && (
+                          <div className="space-y-4">
+                            <p className="text-lg font-semibold">
+                              {selectedModule.game.challenges[currentChallenge].question}
                             </p>
-                            <p>{challengeResult.explanation}</p>
+                            <div className="grid grid-cols-2 gap-4">
+                              {selectedModule.game.challenges[currentChallenge].options.map((option, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  className="text-lg py-8"
+                                  onClick={() => handleAnswerSubmit(selectedModule.id, idx)}
+                                  disabled={challengeResult.isCorrect !== null}
+                                >
+                                  {option}
+                                </Button>
+                              ))}
+                            </div>
+                            {challengeResult.isCorrect !== null && (
+                              <div className={`p-4 rounded-lg ${
+                                challengeResult.isCorrect ? 'bg-green-100' : 'bg-red-100'
+                              }`}>
+                                <p className="font-semibold">
+                                  {challengeResult.isCorrect ? "Correct!" : "Incorrect"}
+                                </p>
+                                <p>{challengeResult.explanation}</p>
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    )}
-                    
-                    {/* Add quiz results display */}
-                    {currentChallenge === selectedModule.game.challenges.length - 1 && 
-                     renderQuizResults(selectedModule.id)}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
                 </Tabs>
               </>
             )}
           </DialogContent>
         </Dialog>
+        <button onClick={UpdateProgress}>Submit</button>
       </div>
     </div>
   );
 };
-
 
 const EncryptionLearningPortalApp = () => {
   return (

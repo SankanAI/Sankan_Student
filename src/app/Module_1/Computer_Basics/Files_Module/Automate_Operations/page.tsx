@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { secureStorage } from '@/lib/storage';
+import ChatForm from '@/app/AI_Guide/Teacher_Guide';
+import { RightSidebar } from '@/components/ui/sidebar';
 
 
 type FileManagement = {
@@ -272,6 +274,8 @@ const ProjectLearningInterface = () => {
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [contextPrefix, setcontextPrefix]=useState<string>('');
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -290,6 +294,28 @@ const ProjectLearningInterface = () => {
       else{  setProjectObject(prev => ({  ...prev,  [keys[i]]: false })) }
     }
   }
+
+  const formatObject=(obj: any): string=> {
+    if (obj === null || obj === undefined) return String(obj);
+  
+    if (typeof obj === 'object') {
+      if (Array.isArray(obj)) {
+        return `[${obj.map(item => formatObject(item)).join(', ')}]`;
+      } else {
+        const entries = Object.entries(obj).map(
+          ([key, value]) => `${key}:${formatObject(value)}`
+        );
+        return `{${entries.join(', ')}}`;
+      }
+    }
+    
+    return String(obj);
+  }
+  
+  useEffect(()=>{
+    setcontextPrefix(`In The File Management Application user has selected Project is ${formatObject(selectedProject)} and Items in Selected Project is ${formatObject(items)}`);
+    console.log(contextPrefix)
+  },[contextPrefix, selectedProject, items])
 
     // Initialize on component mount
     useEffect(() => {
@@ -830,6 +856,19 @@ const ProjectLearningInterface = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <button
+        onClick={() => setIsSidebarOpen(true)}
+        className="m-4 px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 rounded-full fixed bottom-10 right-10 transition-colors"
+      >
+        Ask Teacher
+      </button>
+
+      <RightSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      >
+        <ChatForm contextPrefix={contextPrefix}/>
+      </RightSidebar>
     </div>
   );
 };

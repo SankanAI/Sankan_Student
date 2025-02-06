@@ -16,7 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from "js-cookie";
 
@@ -259,7 +259,6 @@ type PhishingSchema = {
   completed_at: string | null;
   last_activity: string;
 };
-
 const PhishingGame = () => {
   const router = useRouter();
   const params = useSearchParams();
@@ -278,9 +277,6 @@ const PhishingGame = () => {
   const [progressRecord, setProgressRecord] = useState<PhishingSchema | null>(null);
   const [phishingCompleted, setIsphishingCompleted] = useState<boolean>(false);
 
-
-
-
   const handleTextSelection = () => {
     const selection = window.getSelection();
     const text = selection?.toString().trim() ?? '';
@@ -291,28 +287,41 @@ const PhishingGame = () => {
   };
 
   const handleThreatIdentification = (threatId: string) => {
-
     const email = phishingEmails[currentEmail];
     const threat = email.threats.find(t => t.id === threatId);
-
-    if (!identifiedThreats.includes(threatId)) {
-      // Correct identification
-      setIdentifiedThreats([...identifiedThreats, threatId]);
+    
+    if (identifiedThreats.includes(threatId)) {
+      // Remove the threat if already identified (toggle off)
+      setIdentifiedThreats(prev => prev.filter(id => id !== threatId));
+      setScore(prevScore => prevScore - (threat ? Math.ceil(email.points / email.threats.length) : 10));
+    } else {
+      // Add the threat if not identified (toggle on)
+      setIdentifiedThreats(prev => [...prev, threatId]);
       setScore(prevScore => prevScore + (threat ? Math.ceil(email.points / email.threats.length) : 10));
-    } 
+    }
   };
 
-  const handleNextEmail = () => {
+  const handleNextEmail = async () => {
     if (currentEmail + 1 < phishingEmails.length) {
       setCurrentEmail(currentEmail + 1);
       setIdentifiedThreats([]);
     } else {
       setGameComplete(true);
+      if (progressRecord?.id) {
+        await supabase
+          .from('phishing')
+          .update({
+            score: score,
+            completed: true,
+            completed_at: new Date().toISOString(),
+            last_activity: new Date().toISOString()
+          })
+          .eq('id', progressRecord.id);
+      }
     }
   };
 
-  const email = phishingEmails[currentEmail];
-
+ 
   const decryptData = useCallback((encryptedText: string): string => {
     if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
     const [ivBase64, encryptedBase64] = encryptedText.split('.');
@@ -454,9 +463,11 @@ const PhishingGame = () => {
     }
   },[userId])
 
+  const email = phishingEmails[currentEmail];
+
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
-       <Card>
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -464,8 +475,14 @@ const PhishingGame = () => {
               <CardTitle>Phishing Email Detection Training</CardTitle>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="secondary">Score: {score}</Badge>
-              <Progress value={(currentEmail / phishingEmails.length) * 100} className="w-32" />
+              <Badge variant="secondary">
+                Email {currentEmail + 1} of {phishingEmails.length}
+              </Badge>
+              <Badge variant="secondary">Score: {score}/{totalPoints}</Badge>
+              <Progress 
+                value={(currentEmail / phishingEmails.length) * 100} 
+                className="w-32" 
+              />
             </div>
           </div>
         </CardHeader>
@@ -491,7 +508,7 @@ const PhishingGame = () => {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold">Identified Threats:</h3>
+            <h3 className="font-semibold">Identify Threats (Click to toggle):</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {email.threats.map(threat => (
                 <TooltipProvider key={threat.id}>
@@ -522,10 +539,7 @@ const PhishingGame = () => {
                 Select suspicious text to analyze potential threats
               </AlertDescription>
             </Alert>
-            <Button 
-              onClick={handleNextEmail}
-              disabled={identifiedThreats.length === 0}
-            >
+            <Button onClick={handleNextEmail}>
               {currentEmail + 1 < phishingEmails.length ? 'Next Email' : 'Complete Training'}
             </Button>
           </div>
@@ -539,7 +553,7 @@ const PhishingGame = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-100 p-4 rounded my-2">
-            &quot;{selectedText}&quot;
+              &quot;{selectedText}&quot;
             </div>
             <DialogDescription>
               Why is this text suspicious?
@@ -567,18 +581,20 @@ const PhishingGame = () => {
             <DialogHeader>
               <DialogTitle>Training Complete!</DialogTitle>
             </DialogHeader>
-            <p>You&apos;ve successfully completed the phishing email detection training.</p>
-            <Button onClick={updateProgress}>
-              Start New Training
-            </Button>
+            <div className="space-y-4">
+              <p>You&apos;ve successfully completed the phishing email detection training.</p>
+              <p>Final Score: {score} out of {totalPoints}</p>
+              <p>Emails Analyzed: {phishingEmails.length}</p>
+              <Button onClick={updateProgress}>
+                Start New Training
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       )}
     </div>
   );
 };
-
-
 
 const PhishingGameApp = () => {
   return (

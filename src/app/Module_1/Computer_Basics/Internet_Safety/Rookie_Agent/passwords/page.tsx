@@ -16,17 +16,6 @@ interface Requirement {
   met: boolean;
 }
 
-// -- password Table
-// CREATE TABLE password (
-//     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-//     rookie_agent_id UUID REFERENCES rookie_agent(id),
-//     student_id UUID NOT NULL UNIQUE,
-//     completed BOOLEAN DEFAULT false,
-//     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-//     completed_at TIMESTAMP WITH TIME ZONE,
-//     last_activity TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-// );
-
 type PasswordRecord = {
   id: string;
   rookie_agent_id: string;

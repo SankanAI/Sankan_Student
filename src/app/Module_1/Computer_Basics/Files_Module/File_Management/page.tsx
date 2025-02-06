@@ -391,6 +391,11 @@ const ProjectLearningInterface = () => {
     }
   };
 
+  useEffect(()=>{
+    setcontextPrefix(`In The File Management Application user has selected Project is ${formatObject(selectedProject)} and Items in Selected Project is ${formatObject(items)}, current project Progress is ${formatObject(projectProgress)}`);
+    console.log(contextPrefix)
+  },[contextPrefix, selectedProject, items, projectProgress])
+
   useEffect(() => {
     const checkCompletion = async (decryptedId: string) => {
       try {
@@ -532,6 +537,24 @@ const ProjectLearningInterface = () => {
     
     setShowValidationDialog(true);
   };
+
+  const formatObject=(obj: any): string=> {
+    if (obj === null || obj === undefined) return String(obj);
+  
+    if (typeof obj === 'object') {
+      if (Array.isArray(obj)) {
+        return `[${obj.map(item => formatObject(item)).join(', ')}]`;
+      } else {
+        const entries = Object.entries(obj).map(
+          ([key, value]) => `${key}:${formatObject(value)}`
+        );
+        return `{${entries.join(', ')}}`;
+      }
+    }
+    
+    return String(obj);
+  }
+  
   
 
   const loadProjectStructure = useCallback((projectName: string, userId: string) => {
@@ -737,16 +760,6 @@ const ProjectLearningInterface = () => {
             </Card>
           ))}
         </div>
-        {/* {allProjectsComplete && (
-          <div className="mt-6 flex justify-end">
-            <Button 
-              className="gap-2 bg-green-500 hover:bg-green-600"
-            >
-              Submit All Projects
-              <CheckCircle className="h-4 w-4" />
-            </Button>
-          </div>
-        )} */}
         {Object.values(completedProjects).every(Boolean) && (
           <div className="mt-6 flex justify-end">
             <Button className="gap-2" onClick={handleSubmit}>
