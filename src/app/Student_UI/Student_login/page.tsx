@@ -114,22 +114,26 @@ function Home() {
 
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-gray-950">
-      <main className="flex flex-1 justify-center px-40 py-5">
-        <div className="w-full flex-1 flex-col py-5">
-          <div className=" rounded-xl bg-cover bg-center bg-no-repeat p-8"
-            style={{
-              backgroundImage: `url("https://cdn.usegalileo.ai/sdxl10/6b462333-622b-4954-a109-51445dde8827.png")`
-            }}>
+    <div className="relative min-h-screen flex-col bg-gray-950 w-full ">
+    <main className="justify-center px-4 sm:px-40 py-5">
+      <div className="w-full lg:w-full md:w-[450px] py-5">
+        <div 
+          className="rounded-xl bg-cover bg-center w-full min-h-[700px] md:min-h-[700px] lg:min-h-[700px] relative"
+          style={{
+            backgroundImage: `url("https://cdn.usegalileo.ai/sdxl10/6b462333-622b-4954-a109-51445dde8827.png")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
             <div className="flex flex-col gap-6 items-center justify-center ">
               <div className="space-y-2">
-                <h1 className="text-4xl font-black tracking-tighter text-white sm:text-5xl  p-2 rounded-[1vh]" style={{background:`url("https://cdn.pixabay.com/photo/2015/06/20/07/24/color-815550_960_720.png")`}}>
+                <h1 className="text-4xl font-black tracking-tighter text-white sm:text-5xl mt-[3vh] w-[390px] lg:w-[full] p-2 rounded-[1vh]" style={{background:`url("https://cdn.pixabay.com/photo/2015/06/20/07/24/color-815550_960_720.png")`}}>
                   Welcome to Sankan Academy
                 </h1>
               </div>
 
               <div 
-                className="bg-[#0A0A0B] rounded-lg opacity-85 text-white p-4  w-[35%] lg:rounded-[3vh] rounded-0 mt-[0vh] py-13"
+                className="bg-[#0A0A0B] rounded-lg opacity-85 text-white p-4 w-[500px] sm:w-[390px] lg:rounded-[3vh] rounded-0 mt-[0vh] py-13"
               >
                 {/* Create Account Section */}
                 <div className="space-y-6 bg-[#111113] rounded-lg p-6 mb-4 ">

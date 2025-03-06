@@ -1,111 +1,174 @@
-
+// pages/teacher/login.tsx
 "use client";
-import React,{useEffect} from "react";
-import {useRouter} from "next/navigation";
-import Image from "next/image";
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
-export default function Home() {
-  
-  const router=useRouter();
-  useEffect(()=>{
-    router.push('/Student_UI/Student_login')
-  },[]);
+// Initialize Supabase client (replace with your actual Supabase URL and anon key)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export default function TeacherLogin() {
+  const [teacherId, setTeacherId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+
+  const [captchaText, setCaptchaText] = useState('');
+  const [userCaptchaInput, setUserCaptchaInput] = useState('');
+  const [captchaSvg, setCaptchaSvg] = useState('');
+
+  const router = useRouter();
+
+  const generateCaptchaText = useCallback(() => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }, []);
+
+  const generateCaptchaSvg = useCallback((text: string) => {
+    const width = 220;
+    const height = 60;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
+    svg += `<rect width="100%" height="100%" fill="#f0f0f0"/>`;
+
+    for (let i = 0; i < 10; i++) {
+      svg += `<line x1="${Math.random() * width}" y1="${Math.random() * height}" 
+                   x2="${Math.random() * width}" y2="${Math.random() * height}" 
+                   stroke="#${Math.floor(Math.random() * 16777215).toString(16)}" stroke-width="1"/>`;
+    }
+
+    text.split('').forEach((char, index) => {
+      svg += `<text x="${30 * (index + 1)}" y="40" font-size="30" 
+                   fill="#${Math.floor(Math.random() * 16777215).toString(16)}">${char}</text>`;
+    });
+
+    svg += '</svg>';
+    return svg;
+  }, []);
+
+  const refreshCaptcha = useCallback(() => {
+    const newCaptchaText = generateCaptchaText();
+    setCaptchaText(newCaptchaText);
+    setCaptchaSvg(generateCaptchaSvg(newCaptchaText));
+    setUserCaptchaInput('');
+  }, [generateCaptchaText, generateCaptchaSvg]);
+
+  useEffect(() => {
+    refreshCaptcha();
+    const storedAttempts = localStorage.getItem('loginAttempts');
+    if (storedAttempts) setLoginAttempts(parseInt(storedAttempts));
+
+    const lockoutTime = localStorage.getItem('lockoutEndTime');
+    if (lockoutTime && new Date(lockoutTime) > new Date()) {
+      setIsLocked(true);
+      setTimeout(() => unlockAccount(), new Date(lockoutTime).getTime() - new Date().getTime());
+    }
+  }, [refreshCaptcha]);
+
+  const unlockAccount = () => {
+    setIsLocked(false);
+    setLoginAttempts(0);
+    localStorage.removeItem('lockoutEndTime');
+    localStorage.setItem('loginAttempts', '0');
+  };
+
+  const handleFailedLogin = () => {
+    const newAttempts = loginAttempts + 1;
+    setLoginAttempts(newAttempts);
+    localStorage.setItem('loginAttempts', newAttempts.toString());
+
+    if (newAttempts >= 5) {
+      setIsLocked(true);
+      const lockoutEnd = new Date(new Date().getTime() + 15 * 60 * 1000);
+      localStorage.setItem('lockoutEndTime', lockoutEnd.toISOString());
+      alert('Account temporarily locked due to too many failed attempts. Please try again after 15 minutes.');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLocked) {
+      alert('Your account is locked due to too many failed login attempts. Please try again later.');
+      return;
+    }
+
+    if (!teacherId.trim()) {
+      alert('Teacher ID is required.');
+      return;
+    }
+
+    if (userCaptchaInput !== captchaText) {
+      alert('CAPTCHA verification failed. Please enter the correct characters.');
+      refreshCaptcha();
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const { data: teacher, error } = await supabase
+        .from('teachers')
+        .select('id, principle_id, school_id')
+        .eq('teacher_id', teacherId)
+        .single();
+
+      if (error || !teacher) {
+        handleFailedLogin();
+        alert('Invalid Teacher ID');
+        refreshCaptcha();
+        return;
+      }
+      router.push(
+        `/Student_UI/Student_login?principalId=${teacher.principle_id}&schoolId=${teacher.school_id}&teacherId=${teacherId}`
+      );
+    } catch (err) {
+      alert('An unexpected error occurred. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="flex items-center justify-center min-h-screen">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Teacher Login</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin}>
+            <div className="space-y-4">
+              <div>
+                <Label>Teacher ID</Label>
+                <Input value={teacherId} onChange={(e) => setTeacherId(e.target.value)} required />
+              </div>
+              <div>
+              </div>
+              <div>
+                <Label>Captcha</Label>
+                <div className="flex items-center">
+                  <div dangerouslySetInnerHTML={{ __html: captchaSvg }} />
+                  <Button type="button" variant="outline" onClick={refreshCaptcha}>
+                    <RefreshCw size={16} />
+                  </Button>
+                </div>
+                <Input value={userCaptchaInput} onChange={(e) => setUserCaptchaInput(e.target.value)} required />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Login'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
