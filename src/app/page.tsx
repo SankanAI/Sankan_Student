@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -131,7 +131,7 @@ export default function TeacherLogin() {
         `/Student_UI/Student_login?principalId=${teacher.principle_id}&schoolId=${teacher.school_id}&teacherId=${teacherId}`
       );
     } catch (err) {
-      alert('An unexpected error occurred. Please try again later.');
+      alert(`An unexpected error occurred. Please try again later.${err}`);
     } finally {
       setIsLoading(false);
     }

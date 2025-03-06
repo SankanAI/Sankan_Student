@@ -874,10 +874,11 @@ const EncryptionLearningPortal: React.FC = () => {
     if(KeysSubject.length==10){
       let Completed=false;
       KeysSubject.forEach(function(element) {
-        let res=moduleProgress[element]["totalQuestions"]- moduleProgress[element]["correctAnswers"]
+        const res=moduleProgress[element]["totalQuestions"]- moduleProgress[element]["correctAnswers"]
         if(res>5){ Completed=false; console.log(`${element} is not yet Completed`)}
         else{ Completed=true; finalSubmit()}
       });
+      console.log(Completed)
     }
     else{
       console.log(moduleProgress)
@@ -939,7 +940,7 @@ const EncryptionLearningPortal: React.FC = () => {
       }
 
       // Initialize or check existing rookie_agent record
-      let { data: rookieAgentData } = await supabase
+      const { data: rookieAgentData } = await supabase
         .from('rookie_agent')
         .select('*')
         .eq('student_id', studentId)

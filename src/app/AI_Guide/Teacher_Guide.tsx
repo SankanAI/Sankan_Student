@@ -11,8 +11,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Language configuration
-const LANGUAGES = {
+// Language configuration with proper typing
+type LanguageCode = 'en-US' | 'kn-IN' | 'ta-IN' | 'hi-IN';
+
+interface LanguageInfo {
+  name: string;
+  code: string;
+}
+
+const LANGUAGES: Record<LanguageCode, LanguageInfo> = {
   'en-US': { name: 'English', code: 'en' },
   'kn-IN': { name: 'ಕನ್ನಡ (Kannada)', code: 'kn' },
   'ta-IN': { name: 'தமிழ் (Tamil)', code: 'ta' },
@@ -24,27 +31,69 @@ interface ChatFormProps {
   contextPrefix: string; // The context to prepend to user queries
 }
 
+// Define SpeechRecognition types since they're not in standard lib
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionError extends Event {
+  error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionError) => void) | null;
+  onend: (() => void) | null;
+}
+
+// Update window interface to include the Speech API
+declare global {
+  interface Window {
+    SpeechRecognition?: typeof SpeechRecognition;
+    webkitSpeechRecognition?: typeof SpeechRecognition;
+  }
+}
+
+// Response type for translation API
+interface TranslationResponse {
+  data: {
+    translations: Array<{
+      translatedText: string;
+    }>;
+  };
+}
+
+// Response type for chat API
+interface ChatResponse {
+  answer: string;
+}
+
 export default function ChatForm({ contextPrefix }: ChatFormProps) {
-  const [query, setQuery] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('en-US');
+  const [query, setQuery] = useState<string>('');
+  const [answer, setAnswer] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en-US');
   const [error, setError] = useState<string | null>(null);
   const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
   const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
   
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Initialize speech synthesis and recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setSpeechSynthesis(window.speechSynthesis);
       
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
+      const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognitionConstructor) {
+        recognitionRef.current = new SpeechRecognitionConstructor();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
       }
@@ -68,12 +117,12 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
       setIsListening(false);
     } else {
       setError(null);
-      recognitionRef.current.onresult = (event: any) => {
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setQuery(transcript);
       };
 
-      recognitionRef.current.onerror = (event: any) => {
+      recognitionRef.current.onerror = (event: SpeechRecognitionError) => {
         console.log('Speech recognition error:', event.error);
         setError('Error recognizing speech. Please try again.');
         setIsListening(false);
@@ -128,9 +177,14 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
     };
   }, [speechSynthesis]);
 
-  const translateText = async (text: string, from: string, to: string) => {
+  const translateText = async (text: string, from: string, to: string): Promise<string> => {
     try {
-      const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${process.env.NEXT_PUBLIC_GOOGLE_TRANSLATE_API_KEY}`, {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_TRANSLATE_API_KEY;
+      if (!apiKey) {
+        throw new Error('Translation API key is missing');
+      }
+      
+      const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,10 +197,10 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Translation failed');
+        throw new Error(`Translation failed: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as TranslationResponse;
       return data.data.translations[0].translatedText;
     } catch (error) {
       console.log('Translation error:', error);
@@ -154,7 +208,7 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -173,7 +227,7 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
       if (selectedLanguage !== 'en-US') {
         englishQuery = await translateText(
           fullQuery,
-          LANGUAGES[selectedLanguage as keyof typeof LANGUAGES].code,
+          LANGUAGES[selectedLanguage].code,
           'en'
         );
       }
@@ -188,10 +242,10 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as ChatResponse;
       
       // Translate answer back to selected language if not English
       let translatedAnswer = data.answer;
@@ -199,7 +253,7 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
         translatedAnswer = await translateText(
           data.answer,
           'en',
-          LANGUAGES[selectedLanguage as keyof typeof LANGUAGES].code
+          LANGUAGES[selectedLanguage].code
         );
       }
 
@@ -257,13 +311,13 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
             Educational Apps Assistant
             <Select
               value={selectedLanguage}
-              onValueChange={setSelectedLanguage}
+              onValueChange={(value: LanguageCode) => setSelectedLanguage(value)}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Language" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(LANGUAGES).map(([key, value]) => (
+                {(Object.entries(LANGUAGES) as [LanguageCode, LanguageInfo][]).map(([key, value]) => (
                   <SelectItem key={key} value={key}>
                     {value.name}
                   </SelectItem>
@@ -278,7 +332,7 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
               <Textarea
                 placeholder="Ask about Mouse Event Training or Typing Triumph applications..."
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuery(e.target.value)}
                 className="min-h-32 pr-12"
               />
               <Button

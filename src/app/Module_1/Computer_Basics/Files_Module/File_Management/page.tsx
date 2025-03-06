@@ -37,6 +37,8 @@ import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
 
 
+type FormatableValue = string | number | boolean | null | undefined | object | Array<FormatableValue>;
+
 type FileManagement = {
   id: string;  // UUID
   file_safety_quest_id: string | null;  // UUID, nullable foreign key
@@ -538,7 +540,7 @@ const ProjectLearningInterface = () => {
     setShowValidationDialog(true);
   };
 
-  const formatObject=(obj: any): string=> {
+  const formatObject=(obj: FormatableValue): string=> {
     if (obj === null || obj === undefined) return String(obj);
   
     if (typeof obj === 'object') {

@@ -39,6 +39,7 @@ const Home = () => {
       const decryptedId = decryptData(userIdCookie, secretKey);
       setUserId(decryptedId);
     } else {
+      console.log(userId)
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     }
   }, []);
