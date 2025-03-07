@@ -34,6 +34,7 @@ import { secureStorage } from '@/lib/storage';
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
 
+type FormatableValue = string | number | boolean | null | undefined | object | Array<FormatableValue>;
 
 type FileManagement = {
   id: string;  // UUID
@@ -295,7 +296,7 @@ const ProjectLearningInterface = () => {
     }
   }
 
-  const formatObject=(obj: any): string=> {
+  const formatObject=(obj: FormatableValue): string=> {
     if (obj === null || obj === undefined) return String(obj);
   
     if (typeof obj === 'object') {

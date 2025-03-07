@@ -98,6 +98,7 @@ export default function ChatForm({ contextPrefix }: ChatFormProps) {
         recognitionRef.current.interimResults = false;
       }
     }
+    console.log(utterance);
   }, []);
 
   useEffect(() => {
