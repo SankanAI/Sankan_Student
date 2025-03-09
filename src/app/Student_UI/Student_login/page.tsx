@@ -133,7 +133,7 @@ function Home() {
               </div>
 
               <div 
-                className="bg-[#0A0A0B] rounded-lg opacity-85 text-white p-4 w-[500px] sm:w-[390px] lg:rounded-[3vh] rounded-0 mt-[0vh] py-13"
+                className="bg-[#0A0A0B] rounded-lg opacity-85 text-white p-4 w-[390px] lg:rounded-[3vh] rounded-0 mt-[0vh] py-13"
               >
                 {/* Create Account Section */}
                 <div className="space-y-6 bg-[#111113] rounded-lg p-6 mb-4 ">

@@ -138,26 +138,26 @@ export default function TeacherLogin() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-screen" style={{background:'url(https://www.doodleaddicts.com/images/uploads/large/45807_randoezim_1643514311.jpg)', backgroundSize:'80%'}}>
+      <Card className="w-[95%] max-w-md">
         <CardHeader>
-          <CardTitle>Teacher Login</CardTitle>
+          <CardTitle className='text-3xl'>Your Teacher ID</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin}>
             <div className="space-y-4">
               <div>
-                <Label>Teacher ID</Label>
+                <Label  className='text-md'>Teacher ID</Label>
                 <Input value={teacherId} onChange={(e) => setTeacherId(e.target.value)} required />
               </div>
               <div>
               </div>
               <div>
-                <Label>Captcha</Label>
+                <Label className='text-md'>Captcha</Label>
                 <div className="flex items-center">
-                  <div dangerouslySetInnerHTML={{ __html: captchaSvg }} />
+                  <div className='h-1/3' dangerouslySetInnerHTML={{ __html: captchaSvg }} />
                   <Button type="button" variant="outline" onClick={refreshCaptcha}>
-                    <RefreshCw size={16} />
+                    <RefreshCw size={24} />
                   </Button>
                 </div>
                 <Input value={userCaptchaInput} onChange={(e) => setUserCaptchaInput(e.target.value)} required />
