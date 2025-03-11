@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 // Define types for better type safety
 type CompletionStatus = {
@@ -20,6 +19,22 @@ interface QueryParams {
   schoolId: string | null;
   teacherId: string | null;
 }
+
+// Utility function to decrypt data
+const decryptData = (encryptedText: string, secretKey: string): string => {
+  try {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    return new TextDecoder().decode(decryptedBytes);
+  } catch (error) {
+    console.error('Decryption error:', error);
+    return '';
+  }
+};
 
 // Independent data fetching hooks
 const useModuleCompletion = (tableName: string, studentId: string | null) => {
@@ -75,14 +90,14 @@ const useQueryParams = (): QueryParams => {
 const Home = () => {
   const router = useRouter();
   const { principalId, schoolId, teacherId } = useQueryParams();
-  const {decryptData} =useCryptoUtils();
+  const secretKey = process.env.NEXT_PUBLIC_SECRET_KEY || '';
   
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const userIdCookie = Cookies.get('userId');
     if (userIdCookie) {
-      const decryptedId = decryptData(userIdCookie);
+      const decryptedId = decryptData(userIdCookie, secretKey);
       setUserId(decryptedId);
     } else {
       router.push(`/Student_UI/Student_login?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);

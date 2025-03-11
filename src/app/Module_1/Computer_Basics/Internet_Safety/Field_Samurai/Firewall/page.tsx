@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -24,7 +24,6 @@ import {
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from "js-cookie";
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 // Updated Type Definitions
 interface FirewallRule {
@@ -264,7 +263,6 @@ const FirewallTraining: React.FC = () => {
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
-  const {decryptData} =useCryptoUtils();
   const [progressRecord, setProgressRecord] = useState<Firewall | null>(null);
   const [IsFirewallCompleted, setIsFirewallCompleted] = useState<boolean>(false);
 
@@ -282,6 +280,19 @@ const FirewallTraining: React.FC = () => {
     }
     updateProgress();
   };
+
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
 
   const initializeProgressRecord = async (studentId: string) => {
     try {

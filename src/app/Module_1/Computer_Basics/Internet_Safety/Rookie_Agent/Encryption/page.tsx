@@ -14,7 +14,7 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
+
 
 // Define types for modules and challenges
 type Challenge = {
@@ -849,7 +849,6 @@ const EncryptionLearningPortal: React.FC = () => {
   }>({ isCorrect: null, explanation: "" });
   const supabase = createClientComponentClient();
   const [userId, setUserId] = useState<string>('');
-  const {decryptData} =useCryptoUtils();
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
@@ -910,6 +909,20 @@ const EncryptionLearningPortal: React.FC = () => {
       console.log('Error updating progress:', error);
   }
 }
+  
+
+  const decryptData = (encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  };
 
   const initializeProgressRecord = async (studentId: string) => {
     try {

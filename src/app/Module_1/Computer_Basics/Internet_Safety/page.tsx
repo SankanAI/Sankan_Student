@@ -6,14 +6,27 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
+const decryptData = (encryptedText: string, secretKey: string): string => {
+  try {
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(secretKey).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    return new TextDecoder().decode(decryptedBytes);
+  } catch (error) {
+    console.error('Decryption error:', error);
+    return '';
+  }
+};
 
 const Home = () => {
   const router = useRouter();
   const params = useSearchParams();
   const secretKey = process.env.NEXT_PUBLIC_SECRET_KEY || '';
-  const {decryptData} =useCryptoUtils();
+  
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
@@ -23,7 +36,7 @@ const Home = () => {
   useEffect(() => {
     const userIdCookie = Cookies.get('userId');
     if (userIdCookie) {
-      const decryptedId = decryptData(userIdCookie);
+      const decryptedId = decryptData(userIdCookie, secretKey);
       setUserId(decryptedId);
     } else {
       console.log(userId)

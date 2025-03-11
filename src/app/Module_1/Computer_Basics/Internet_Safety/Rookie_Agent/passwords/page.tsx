@@ -9,7 +9,6 @@ import { Sword, Shield, Scroll, Cpu, Brain, Server, Rocket } from "lucide-react"
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 interface Requirement {
   id: "length" | "uppercase" | "lowercase" | "number" | "special";
@@ -60,7 +59,6 @@ const COMPUTER_SPEEDS: ComputerSpeeds = {
 const PasswordSamurai: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [strength, setStrength] = useState<number>(0);
-  const {decryptData} =useCryptoUtils();
   const [crackTimes, setCrackTimes] = useState<CrackTimes>({
     human: "",
     computer: "",
@@ -77,6 +75,20 @@ const PasswordSamurai: React.FC = () => {
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
+
+
+  const decryptData = (encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  };
 
   const initializeProgressRecord = async (studentId: string) => {
     try {

@@ -16,7 +16,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
+
 
 // Type Definitions
 type DevDetectiveRecord = {
@@ -45,7 +45,7 @@ const MathDetectiveContent = () => {
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
-  const {decryptData} =useCryptoUtils();
+
   // State management
   const [showInstructions, setShowInstructions] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
@@ -63,6 +63,20 @@ const MathDetectiveContent = () => {
 
   // Refs
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Utility functions
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
 
   // Speech synthesis
   const speak = useCallback((text: string) => {

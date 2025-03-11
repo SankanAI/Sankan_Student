@@ -35,7 +35,6 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
-import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 
 type FormatableValue = string | number | boolean | null | undefined | object | Array<FormatableValue>;
@@ -280,13 +279,27 @@ const ProjectLearningInterface = () => {
   const supabase = createClientComponentClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [contextPrefix, setcontextPrefix]=useState<string>('');
-  const {decryptData} =useCryptoUtils();
+
 
    
   // Get URL parameters
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
+
+
+  const decryptData = useCallback((encryptedText: string): string => {
+    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
+    const [ivBase64, encryptedBase64] = encryptedText.split('.');
+    if (!ivBase64 || !encryptedBase64) return '';
+    
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
+    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
+    
+    return new TextDecoder().decode(decryptedBytes);
+  }, []);
 
   // Initialize progress record
   const initializeProgressRecord = async (studentId: string) => {
