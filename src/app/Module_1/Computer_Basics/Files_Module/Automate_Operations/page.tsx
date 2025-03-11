@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { Terminal, Folder, CheckCircle, XCircle,  ArrowRight } from 'lucide-react';
 import { FaReact } from "react-icons/fa";
 import { SiFlask } from "react-icons/si";
