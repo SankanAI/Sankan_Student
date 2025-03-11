@@ -14,7 +14,7 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
-import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
+import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 // Define types for modules and challenges
 type Challenge = {

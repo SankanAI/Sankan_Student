@@ -6,7 +6,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
+import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 
 const Home = () => {

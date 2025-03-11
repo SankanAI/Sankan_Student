@@ -16,7 +16,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
-import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
+import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 // Type Definitions
 type DevDetectiveRecord = {

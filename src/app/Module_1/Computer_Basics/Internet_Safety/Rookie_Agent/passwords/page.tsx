@@ -9,7 +9,7 @@ import { Sword, Shield, Scroll, Cpu, Brain, Server, Rocket } from "lucide-react"
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Cookies from "js-cookie";
-import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
+import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 interface Requirement {
   id: "length" | "uppercase" | "lowercase" | "number" | "special";
@@ -77,7 +77,7 @@ const PasswordSamurai: React.FC = () => {
   const principalId = params.get('principalId');
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
-  
+
   const initializeProgressRecord = async (studentId: string) => {
     try {
       // Check for existing computer_basics record

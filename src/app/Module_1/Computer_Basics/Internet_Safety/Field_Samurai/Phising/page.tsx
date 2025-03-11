@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from "js-cookie";
-import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
+import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 
 // interface Threat {
 //   id: string;

@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import { secureStorage } from '@/lib/storage';
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
-import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
+import { useCryptoUtils } from "@/lib/utils/cryptoUtils";
 type FormatableValue = string | number | boolean | null | undefined | object | Array<FormatableValue>;
 
 type FileManagement = {
