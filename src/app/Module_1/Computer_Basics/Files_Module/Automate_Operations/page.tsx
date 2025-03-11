@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import { secureStorage } from '@/lib/storage';
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
-
+import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
 type FormatableValue = string | number | boolean | null | undefined | object | Array<FormatableValue>;
 
 type FileManagement = {
@@ -277,6 +277,7 @@ const ProjectLearningInterface = () => {
   const teacherId = params.get('teacherId');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [contextPrefix, setcontextPrefix]=useState<string>('');
+  const {decryptData} =useCryptoUtils();
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -354,19 +355,6 @@ const ProjectLearningInterface = () => {
       }
     }, [userId]);
 
-      // Decryption utility
-  const decryptData = useCallback((encryptedText: string): string => {
-    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
-    const [ivBase64, encryptedBase64] = encryptedText.split('.');
-    if (!ivBase64 || !encryptedBase64) return '';
-    
-    const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
-    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
-    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
-    
-    return new TextDecoder().decode(decryptedBytes);
-  }, []);
 
   const initializeProgressRecord = async (studentId: string) => {
     try {

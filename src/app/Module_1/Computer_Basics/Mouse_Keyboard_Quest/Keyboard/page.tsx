@@ -12,6 +12,7 @@ import Cookies from "js-cookie";
 import { Volume2, VolumeX, ChevronRight, ChevronLeft } from "lucide-react";
 import ChatForm from '@/app/AI_Guide/Teacher_Guide';
 import { RightSidebar } from '@/components/ui/sidebar';
+import { useCryptoUtils } from "@/app/Custom_Hooks/cryptoUtils";
 
 interface IntroDialogProps {
   isOpen: boolean;
@@ -434,6 +435,7 @@ type KeyboardRecord = {
 function TypingTriumpContent() {
   const router=useRouter();
   const params = useSearchParams();
+  const {decryptData} =useCryptoUtils();
   const supabase = createClientComponentClient();
   const [currentLevel, setCurrentLevel] = useState<GameLevel>(LEVELS[0]);
   const [currentWord, setCurrentWord] = useState('');
@@ -475,20 +477,6 @@ function TypingTriumpContent() {
     const randomIndex = Math.floor(Math.random() * currentLevel.words.length);
     return currentLevel.words[randomIndex];
   };
-
-  // Utility functions
-  const decryptData = useCallback((encryptedText: string): string => {
-    if (!process.env.NEXT_PUBLIC_SECRET_KEY) return '';
-    const [ivBase64, encryptedBase64] = encryptedText.split('.');
-    if (!ivBase64 || !encryptedBase64) return '';
-    
-    const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(process.env.NEXT_PUBLIC_SECRET_KEY).slice(0, 16);
-    const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
-    const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]);
-    
-    return new TextDecoder().decode(decryptedBytes);
-  }, []);
 
    const initializeProgressRecord = async (studentId: string) => {
     console.log(progressRecord);
