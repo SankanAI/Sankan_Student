@@ -1,241 +1,212 @@
-"use client";
-import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { 
-  Monitor, 
-  GamepadIcon, 
-  Code2, 
-  Brain, 
-  Palette,
-  Info
-} from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
-interface RoadmapNode {
-  id: number;
+"use client";// RoadmapTypes.ts
+export interface SubTopic {
   title: string;
-  x: number;
-  y: number;
-  color: string;
-  moduleId: number;
 }
 
-interface Module {
-  id: number;
+export interface Topic {
   title: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
+  subtopics: string[];
 }
 
-const modules: Module[] = [
-  {
-    id: 1,
-    title: "Digital Explorer",
-    description: "Learn computer basics and internet safety fundamentals",
-    icon: <Monitor className="h-4 w-4" />,
-    color: "#fef9c3"
-  },
-  {
-    id: 2,
-    title: "Logic Games",
-    description: "Develop problem-solving and logical thinking skills",
-    icon: <GamepadIcon className="h-4 w-4" />,
-    color: "#fef9c3"
-  },
-  {
-    id: 3,
-    title: "Block Commander",
-    description: "Master visual programming and basic coding concepts",
-    icon: <Code2 className="h-4 w-4" />,
-    color: "#dcfce7"
-  },
-  {
-    id: 4,
-    title: "Algorithm Adventure",
-    description: "Learn basic algorithms and computational thinking",
-    icon: <Brain className="h-4 w-4" />,
-    color: "#e9d5ff"
-  },
-  {
-    id: 5,
-    title: "Creative Coder",
-    description: "Create interactive stories and simple games",
-    icon: <Palette className="h-4 w-4" />,
-    color: "#fbcfe8"
-  }
-];
+export interface Module {
+  title: string;
+  topics: Topic[];
+}
 
-const roadmapNodes: RoadmapNode[] = [
-  // Digital Explorer
-  { id: 1, title: "Internet safety", x: 15, y: 20, color: "#fef9c3", moduleId: 1 },
-  { id: 2, title: "Using mouse & keyboard", x: 20, y: 25, color: "#fef9c3", moduleId: 1 },
-  { id: 3, title: "File management", x: 25, y: 30, color: "#fef9c3", moduleId: 1 },
+// RoadmapComponent.tsx
+import React, { useState, ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+
+interface RoadmapItemProps {
+  title: string;
+  children?: ReactNode;
+  level?: 1 | 2 | 3;
+  defaultOpen?: boolean;
+}
+
+const RoadmapItem: React.FC<RoadmapItemProps> = ({ 
+  title, 
+  children, 
+  level = 1, 
+  defaultOpen = false 
+}) => {
+  const [isOpen, setIsOpen] = useState<boolean>(defaultOpen);
   
-  // Logic Games
-  { id: 4, title: "Sequencing challenges", x: 40, y: 20, color: "#fef9c3", moduleId: 2 },
-  { id: 5, title: "Puzzle solving", x: 45, y: 25, color: "#fef9c3", moduleId: 2 },
-  { id: 6, title: "Pattern recognition", x: 50, y: 30, color: "#fef9c3", moduleId: 2 },
+  const textSizeClasses = {
+    1: "text-xl font-bold",
+    2: "text-lg font-semibold",
+    3: "text-base font-medium"
+  };
   
-  // Block Commander
-  { id: 7, title: "Creating sequences", x: 65, y: 20, color: "#dcfce7", moduleId: 3 },
-  { id: 8, title: "Simple loops", x: 70, y: 25, color: "#dcfce7", moduleId: 3 },
-  { id: 9, title: "Understanding blocks", x: 75, y: 30, color: "#dcfce7", moduleId: 3 },
-  { id: 10, title: "Visual Programming Basics", x: 65, y: 35, color: "#dcfce7", moduleId: 3 },
-  { id: 11, title: "Character movement", x: 70, y: 40, color: "#dcfce7", moduleId: 3 },
-  { id: 12, title: "Creative Challenges", x: 75, y: 45, color: "#dcfce7", moduleId: 3 },
-  { id: 13, title: "Animated stories", x: 65, y: 50, color: "#dcfce7", moduleId: 3 },
-  { id: 14, title: "Basic animations", x: 70, y: 55, color: "#dcfce7", moduleId: 3 },
+  const bgClasses = {
+    1: "bg-slate-900 border-slate-700",
+    2: "bg-slate-800 border-slate-700",
+    3: "bg-slate-800/80 border-slate-700"
+  };
   
-  // Algorithm Adventure
-  { id: 15, title: "Basic Algorithms", x: 15, y: 60, color: "#e9d5ff", moduleId: 4 },
-  { id: 16, title: "Decision making", x: 20, y: 65, color: "#e9d5ff", moduleId: 4 },
-  { id: 17, title: "Step-by-step thinking", x: 25, y: 70, color: "#e9d5ff", moduleId: 4 },
-  { id: 18, title: "Simple repetition", x: 30, y: 75, color: "#e9d5ff", moduleId: 4 },
-  { id: 19, title: "Problem Solving", x: 35, y: 70, color: "#e9d5ff", moduleId: 4 },
-  { id: 20, title: "Simple games", x: 40, y: 75, color: "#e9d5ff", moduleId: 4 },
-  
-  // Creative Coder
-  { id: 21, title: "Show and tell", x: 55, y: 60, color: "#fbcfe8", moduleId: 5 },
-  { id: 22, title: "Code review", x: 60, y: 65, color: "#fbcfe8", moduleId: 5 },
-  { id: 23, title: "Interactive stories", x: 65, y: 70, color: "#fbcfe8", moduleId: 5 },
-  { id: 24, title: "Basic games", x: 70, y: 75, color: "#fbcfe8", moduleId: 5 }
-];
-
-const createCurve = (start: {x: number, y: number}, end: {x: number, y: number}): string => {
-  const controlPoint1X = start.x + (end.x - start.x) / 2;
-  const controlPoint1Y = start.y;
-  const controlPoint2X = controlPoint1X;
-  const controlPoint2Y = end.y;
-  
-  return `M ${start.x} ${start.y} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${end.x} ${end.y}`;
-};
-
-const CodingJourneyRoadmap = () => {
-  const [hoveredNode, setHoveredNode] = useState<number | null>(null);
-  const params = useSearchParams();
-
-  const principalId = params.get('principalId');
-  const schoolId = params.get('schoolId');
-  const teacherId = params.get('teacherId');
-
-  const connections = [
-    [1, 2], [2, 3],
-    [4, 5], [5, 6],
-    [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14],
-    [15, 16], [16, 17], [17, 18], [15, 19], [19, 20],
-    [21, 22], [22, 23], [23, 24]
-  ];
-
-  if (!principalId || !schoolId || !teacherId) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
-        Missing required parameters
-      </div>
-    );
-  }
-
   return (
-    <div className="relative w-full h-screen bg-gray-900 overflow-hidden p-8">
-      {/* Module Legend */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 bg-gray-800 p-4 rounded-lg">
-        {modules.map(module => (
-          <TooltipProvider key={module.id}>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex items-center gap-2 text-white">
-                  {module.icon}
-                  <span>{module.title}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{module.description}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))}
-      </div>
-
-      <svg className="absolute inset-0 w-full h-full">
-        {connections.map(([fromId, toId], index) => {
-          const fromNode = roadmapNodes.find(n => n.id === fromId);
-          const toNode = roadmapNodes.find(n => n.id === toId);
-          
-          if (!fromNode || !toNode) return null;
-          
-          return (
-            <path
-              key={`connection-${index}`}
-              d={createCurve(
-                { x: fromNode.x * 10, y: fromNode.y * 10 },
-                { x: toNode.x * 10, y: toNode.y * 10 }
-              )}
-              stroke={hoveredNode === fromId || hoveredNode === toId ? "#fff" : "#4b5563"}
-              strokeWidth="2"
-              fill="none"
-              className="transition-colors duration-300"
-            />
-          );
-        })}
-      </svg>
-      
-      <TooltipProvider>
-        {roadmapNodes.map((node) => (
-          <div
-            key={node.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300"
-            style={{
-              left: `${node.x * 10}px`,
-              top: `${node.y * 10}px`,
-            }}
-            onMouseEnter={() => setHoveredNode(node.id)}
-            onMouseLeave={() => setHoveredNode(null)}
-          >
-            <Tooltip>
-              <TooltipTrigger>
-                <Card
-                  className="p-3 cursor-pointer transition-transform duration-300 hover:scale-110 flex items-center gap-2"
-                  style={{
-                    backgroundColor: node.color,
-                    transform: hoveredNode === node.id ? 'scale(1.1)' : 'scale(1)',
-                    zIndex: hoveredNode === node.id ? 10 : 1
-                  }}
-                >
-                  <Info className="h-4 w-4" />
-                  <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                    {node.title}
-                  </p>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Part of {modules.find(m => m.id === node.moduleId)?.title}</p>
-              </TooltipContent>
-            </Tooltip>
+    <div className={`roadmap-item level-${level} w-full ${level > 1 ? 'ml-4' : ''}`}>
+      <Card className={`mb-3 shadow-md ${bgClasses[level]}`}>
+        <CardHeader className="py-3 px-4 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className={`${textSizeClasses[level]} text-slate-100`}>
+              {title}
+            </CardTitle>
+            {children && (
+              isOpen ? <ChevronDown className="h-5 w-5 text-slate-400" /> : <ChevronRight className="h-5 w-5 text-slate-400" />
+            )}
           </div>
-        ))}
-      </TooltipProvider>
+        </CardHeader>
+        
+        {isOpen && children && (
+          <CardContent className="py-2 px-4">
+            {children}
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 };
 
+interface SubTopicListProps {
+  items: string[];
+}
 
-const GameMap = () => {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+const SubTopicList: React.FC<SubTopicListProps> = ({ items }) => (
+  <div className="grid grid-cols-1 gap-2 ml-2">
+    {items.map((item, index) => (
+      <div key={index} className="flex items-start space-x-2 w-[95%]">
+        <div className="min-w-2 h-2 w-2 rounded-full bg-purple-500 mt-2"></div>
+        <span className="text-slate-300 w-[95%]">{item}</span>
       </div>
-    }>
-      <CodingJourneyRoadmap/>
-    </Suspense>
+    ))}
+  </div>
+);
+
+const CurriculumRoadmap: React.FC = () => {
+  const roadmapData: Module[] = [
+    {
+      title: "1: Digital Explorer",
+      topics: [
+        {
+          title: "Computer Basics",
+          subtopics: [
+            "Using mouse & keyboard",
+            "Internet safety",
+            "File management"
+          ]
+        },
+        {
+          title: "Logic Games",
+          subtopics: [
+            "Pattern recognition",
+            "Puzzle solving",
+            "Sequencing challenges"
+          ]
+        }
+      ]
+    },
+    {
+      title: "2: Block Commander",
+      topics: [
+        {
+          title: "Visual Programming Basics",
+          subtopics: [
+            "Understanding blocks",
+            "Simple loops",
+            "Creating sequences"
+          ]
+        },
+        {
+          title: "Creative Challenges",
+          subtopics: [
+            "Character movement",
+            "Basic animations",
+            "Animated stories"
+          ]
+        }
+      ]
+    },
+    {
+      title: "3: Algorithm Adventure",
+      topics: [
+        {
+          title: "Basic Adventure",
+          subtopics: [
+            "Decision Making",
+            "Simple Repetition",
+            "Step-By-Step Thinking"
+          ]
+        },
+        {
+          title: "Problem Solving",
+          subtopics: [
+            "Pattern Creation",
+            "Simple games",
+            "Maze Navigation"
+          ]
+        }
+      ]
+    },
+    {
+      title: "4: Creative Coder",
+      topics: [
+        {
+          title: "Project Based",
+          subtopics: [
+            "Simple Animation",
+            "Interactive Stories",
+            "Simple Animation"
+          ]
+        },
+        {
+          title: "Team Challenges",
+          subtopics: [
+            "Code Review",
+            "Show and Tell",
+            "Pair Programming"
+          ]
+        }
+      ]
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-950 p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-left text-white mb-8">
+          Roadmap
+        </h1>
+        
+        <div className="space-y-2">
+          {roadmapData.map((module, moduleIndex) => (
+            <React.Fragment key={moduleIndex}>
+              <RoadmapItem title={module.title} level={1} defaultOpen={moduleIndex === 0}>
+                <div className="space-y-2">
+                  {module.topics.map((topic, topicIndex) => (
+                    <RoadmapItem key={topicIndex} title={topic.title} level={2}>
+                      <SubTopicList items={topic.subtopics} />
+                    </RoadmapItem>
+                  ))}
+                </div>
+              </RoadmapItem>
+              
+              {moduleIndex < roadmapData.length - 1 && (
+                <div className="flex justify-center">
+                  <div className="w-8 h-8">
+                    <svg viewBox="0 0 24 24" className="w-full h-full text-purple-500">
+                      <path fill="currentColor" d="M12 4l1.41 1.41L7.83 12l5.58 5.59L12 19l-7-7 7-7z" transform="rotate(270 12 12)"/>
+                    </svg>
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
 
-
-export default GameMap;
+export default CurriculumRoadmap;

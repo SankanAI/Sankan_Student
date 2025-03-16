@@ -2,16 +2,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useRouter, useSearchParams} from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import Cookies from "js-cookie";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-
-
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 function Home() {
-
   const router = useRouter();
   const params = useSearchParams();
   
@@ -20,12 +20,12 @@ function Home() {
   const schoolId = params.get('schoolId');
   const teacherId = params.get('teacherId');
 
-  const [studentId, setstudentId] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const supabase = createClientComponentClient();
-  const secretKey= process.env.NEXT_PUBLIC_SECRET_KEY;
+  const secretKey = process.env.NEXT_PUBLIC_SECRET_KEY;
 
   const encryptData = (text: string): string => {
     const encoder = new TextEncoder();
@@ -40,24 +40,19 @@ function Home() {
     return `${ivString}.${encryptedString}`;
   };
 
-  // const decryptData = (encryptedText: string): string => {
-  //   const [ivBase64, encryptedBase64] = encryptedText.split('.');
-  //   if (!ivBase64 || !encryptedBase64) return ''; 
-  //   const encoder = new TextEncoder();
-  //   const keyBytes = encoder.encode(secretKey).slice(0, 16); // Use the first 16 bytes for AES key
-  //   const encryptedBytes = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
-  //   const decryptedBytes = encryptedBytes.map((byte, index) => byte ^ keyBytes[index % keyBytes.length]); // XOR for decryption
-  //   return new TextDecoder().decode(decryptedBytes);
-  // };
-
   const handleLogin = async () => {
+    if (!studentId.trim() || !password.trim()) {
+      setError("Please enter both student ID and password");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
 
-      // First, verify if the student exists with the given studentId
+      // Verify if the student exists with the given studentId
       const { data: student, error: studentError } = await supabase
-        .from('students')  // Assuming you have a students table
+        .from('students')
         .select('id')
         .eq('password', password)
         .eq('student_id', studentId)
@@ -68,7 +63,6 @@ function Home() {
         .single();
 
       if (studentError || !student) {
-        console.log(studentError, student)
         throw new Error('Invalid credentials');
       }
 
@@ -88,115 +82,118 @@ function Home() {
         sameSite: "strict"
       });
 
-      // Store additional information if needed
-
       // Redirect to dashboard
       router.push(`/Student_UI/Student_Flow/BackStory?principalId=${principalId}&schoolId=${schoolId}&teacherId=${teacherId}`);
     } catch (err) {
-      console.log("Some error",err);
-       setError("Some Error")
+      console.error("Login error:", err);
+      setError("Invalid student ID or password. Please try again.");
     } finally {
       setLoading(false);
-      console.log(loading)
     }
   };
 
-  // Add validation for required parameters
+  // Show error if required parameters are missing
   if (!principalId || !schoolId || !teacherId) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#121212] text-white">
-        <Alert variant="destructive">
-          <AlertDescription>Missing required parameters</AlertDescription>
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertDescription>
+            Missing required parameters. Please use a valid login link.
+          </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-
   return (
-    <div className="relative min-h-screen flex-col bg-gray-950 w-full ">
-    <main className="justify-center px-4 sm:px-40 py-5">
-      <div className="w-full lg:w-full md:w-[450px] py-5">
-        <div 
-          className="rounded-xl bg-cover bg-center w-full min-h-[700px] md:min-h-[700px] lg:min-h-[700px] relative"
-          style={{
-            backgroundImage: `url("https://cdn.usegalileo.ai/sdxl10/6b462333-622b-4954-a109-51445dde8827.png")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-            <div className="flex flex-col gap-6 items-center justify-center ">
-              <div className="space-y-2">
-                <h1 className="text-4xl font-black tracking-tighter text-white sm:text-5xl mt-[3vh] w-[390px] lg:w-[full] p-2 rounded-[1vh]" style={{background:`url("https://cdn.pixabay.com/photo/2015/06/20/07/24/color-815550_960_720.png")`}}>
-                  Welcome to Sankan Academy
-                </h1>
-              </div>
-
-              <div 
-                className="bg-[#0A0A0B] rounded-lg opacity-85 text-white p-4 w-[390px] lg:rounded-[3vh] rounded-0 mt-[0vh] py-13"
-              >
-                {/* Create Account Section */}
-                <div className="space-y-6 bg-[#111113] rounded-lg p-6 mb-4 ">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold">Login into account</h2>
-                    <p className="text-gray-400">Enter your email below to create your account</p>
-                  </div>
-
-                  {error && (
-                    <div className="text-red-500 text-sm mb-4">
-                      {error}
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium leading-none" htmlFor="email">
-                        Student Id
-                      </label>
-                      <Input
-                        id="name"
-                        placeholder="student_id"
-                        type="email"
-                        value={studentId}
-                        onChange={(e) => setstudentId(e.target.value)}
-                        className="bg-[#1C1C1E] border-none text-white placeholder:text-gray-400 border border-gray-500"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium leading-none" htmlFor="password">
-                        Password
-                      </label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="bg-[#1C1C1E] border-none text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full bg-purple-600 hover:bg-purple-700"
-                    onClick={handleLogin}
-                  >
-                    Login into account
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      {/* Background grid pattern */}
+      <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:40px_40px]" />
+      
+      {/* Content container */}
+      <div className="relative z-10 w-full max-w-md px-4 py-8">
+        <div className="text-center mb-6">
+          <h1 className="text-5xl tracking-tighter font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 mb-2">
+            Sankan Academy
+          </h1>
+          <p className="text-slate-400">Welcome to your learning journey</p>
         </div>
-      </main>
+
+        <Card className="border-slate-800 bg-slate-900/70 backdrop-blur-sm shadow-xl">
+          <CardHeader className="border-b border-slate-800 pb-5">
+            <CardTitle className="text-2xl font-bold text-slate-100">Student Login</CardTitle>
+            <CardDescription className="text-slate-400">
+              Enter your credentials to access your account
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="pt-6">
+            {error && (
+              <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-900 text-red-300">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="studentId" className="text-sm font-medium text-slate-300">
+                  Student ID
+                </Label>
+                <Input
+                  id="studentId"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  placeholder="Enter your student ID"
+                  className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-700"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium text-slate-300">
+                    Password
+                  </Label>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-700"
+                />
+              </div>
+              
+              <Button 
+                onClick={handleLogin}
+                disabled={loading}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Login"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }
 
-const login = () => {
+const Login = () => {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="h-16 w-16 relative">
+          <div className="absolute inset-0 rounded-full border-4 border-t-purple-600 border-b-transparent border-l-transparent border-r-transparent animate-spin"></div>
+          <div className="absolute inset-2 rounded-full border-4 border-r-purple-400 border-t-transparent border-b-transparent border-l-transparent animate-spin"></div>
+        </div>
       </div>
     }>
       <Home />
@@ -204,4 +201,4 @@ const login = () => {
   );
 };
 
-export default login;
+export default Login;

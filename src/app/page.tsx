@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
 // Initialize Supabase client (replace with your actual Supabase URL and anon key)
@@ -38,18 +38,23 @@ export default function TeacherLogin() {
   const generateCaptchaSvg = useCallback((text: string) => {
     const width = 220;
     const height = 60;
+    // Using lighter colors for better visibility against dark background
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
-    svg += `<rect width="100%" height="100%" fill="#f0f0f0"/>`;
+    svg += `<rect width="100%" height="100%" fill="#1e293b"/>`; // Dark blue-gray background
 
+    // Add noise lines in lighter colors
     for (let i = 0; i < 10; i++) {
+      const color = `#${Math.floor(Math.random() * 0x999999 + 0x666666).toString(16)}`;
       svg += `<line x1="${Math.random() * width}" y1="${Math.random() * height}" 
                    x2="${Math.random() * width}" y2="${Math.random() * height}" 
-                   stroke="#${Math.floor(Math.random() * 16777215).toString(16)}" stroke-width="1"/>`;
+                   stroke="${color}" stroke-width="1"/>`;
     }
 
+    // Add text in light colors
     text.split('').forEach((char, index) => {
+      const color = `#${Math.floor(Math.random() * 0x666666 + 0x999999).toString(16)}`;
       svg += `<text x="${30 * (index + 1)}" y="40" font-size="30" 
-                   fill="#${Math.floor(Math.random() * 16777215).toString(16)}">${char}</text>`;
+                   fill="${color}" font-family="monospace">${char}</text>`;
     });
 
     svg += '</svg>';
@@ -138,37 +143,64 @@ export default function TeacherLogin() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen" style={{background:'url(https://www.doodleaddicts.com/images/uploads/large/45807_randoezim_1643514311.jpg)', backgroundSize:'80%'}}>
-      <Card className="w-[95%] max-w-md">
-        <CardHeader>
-          <CardTitle className='text-3xl'>Your Teacher ID</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin}>
-            <div className="space-y-4">
-              <div>
-                <Label  className='text-md'>Teacher ID</Label>
-                <Input value={teacherId} onChange={(e) => setTeacherId(e.target.value)} required />
+    <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:40px_40px]" />
+      <div className="relative z-10 w-full max-w-md px-4">
+        <Card className="border-slate-800 bg-slate-950 shadow-lg">
+          <CardHeader className="border-b border-slate-800 pb-5">
+            <CardTitle className="text-3xl font-bold text-slate-100">Teacher Login</CardTitle>
+            <CardDescription className="text-slate-400">Enter your credentials to access the system</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 pb-4">
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="teacherId" className="text-sm font-medium text-slate-300">Teacher ID</Label>
+                <Input 
+                  id="teacherId"
+                  value={teacherId} 
+                  onChange={(e) => setTeacherId(e.target.value)} 
+                  className="bg-slate-900 border-slate-800 text-slate-100 focus-visible:ring-slate-700"
+                  placeholder="Enter your ID"
+                  required 
+                />
               </div>
-              <div>
-              </div>
-              <div>
-                <Label className='text-md'>Captcha</Label>
-                <div className="flex items-center">
-                  <div className='h-1/3' dangerouslySetInnerHTML={{ __html: captchaSvg }} />
-                  <Button type="button" variant="outline" onClick={refreshCaptcha}>
-                    <RefreshCw size={24} />
+              
+              <div className="space-y-2">
+                <Label htmlFor="captcha" className="text-sm font-medium text-slate-300">Security Verification</Label>
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="h-16 flex-grow rounded overflow-hidden border border-slate-800" 
+                       dangerouslySetInnerHTML={{ __html: captchaSvg }} />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    className="h-10 w-10 border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300"
+                    onClick={refreshCaptcha}
+                  >
+                    <RefreshCw size={18} />
                   </Button>
                 </div>
-                <Input value={userCaptchaInput} onChange={(e) => setUserCaptchaInput(e.target.value)} required />
+                <Input 
+                  id="captcha"
+                  value={userCaptchaInput} 
+                  onChange={(e) => setUserCaptchaInput(e.target.value)} 
+                  className="bg-slate-900 border-slate-800 text-slate-100 focus-visible:ring-slate-700"
+                  placeholder="Enter the characters you see above"
+                  required 
+                />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100"
+                disabled={isLoading}
+              >
                 {isLoading ? 'Logging in...' : 'Login'}
               </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
